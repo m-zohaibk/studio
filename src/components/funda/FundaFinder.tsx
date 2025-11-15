@@ -115,10 +115,14 @@ export default function FundaFinder() {
     setStructuredQuery(null);
     setResults(null);
     try {
+      // The AI flow expects a single string for construction_period, not an array.
+      // And we need to handle the 'any' value for construction period.
+      const constructionPeriodValue = data.construction_period[0];
       const query = {
         ...data,
-        construction_period: data.construction_period[0] || '',
+        construction_period: constructionPeriodValue === 'any' ? '' : constructionPeriodValue || '',
       };
+      
       const structured = await getStructuredQuery(query);
       setStructuredQuery(structured);
       setResults(generateDummyProperties(8, structured));
@@ -157,12 +161,18 @@ export default function FundaFinder() {
       ['availability'],
     ];
 
-    const currentFields = fieldsByStep[step];
-    // We only validate if there are fields to validate for the current step.
-    const isValid = currentFields.length > 0 ? await trigger(currentFields) : true;
+    const currentStepFields = fieldsByStep[step];
+    let isValid = true;
+    if (currentStepFields && currentStepFields.length > 0) {
+      isValid = await trigger(currentStepFields);
+    }
     
     if (isValid) {
-      setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
+      if (step < TOTAL_STEPS -1) {
+        setStep(prev => prev + 1);
+      } else {
+        handleSubmit(onSubmit)();
+      }
     }
   };
   
@@ -186,10 +196,13 @@ export default function FundaFinder() {
         className: "w-full"
     };
 
+    const key = `step-${step}`;
+    const props = {...motionProps, key};
+
     switch (step) {
       case 0:
         return (
-          <motion.div key="step-0" {...motionProps} className="text-center">
+          <motion.div {...props} className="text-center">
             <Home className="mx-auto h-16 w-16 text-primary mb-4" />
             <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Welcome to Funda Finder</h1>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">Let's find your dream home. We'll ask a few questions to tailor the search for you.</p>
@@ -197,7 +210,7 @@ export default function FundaFinder() {
         );
       case 1:
         return (
-          <motion.div key="step-1" {...motionProps}>
+          <motion.div {...props}>
             <Label htmlFor="selected_area" className="text-xl font-medium mb-4 flex items-center gap-2"><Home className="w-6 h-6 text-primary"/>What city or area are you interested in?</Label>
             <Controller
               name="selected_area"
@@ -211,7 +224,7 @@ export default function FundaFinder() {
         );
       case 2:
         return (
-            <motion.div key="step-2" {...motionProps}>
+            <motion.div {...props}>
                 <Label className="text-xl font-medium mb-12 flex items-center gap-2"><CircleDollarSign className="w-6 h-6 text-primary"/>What is your price range?</Label>
                 <Controller
                   name="price"
@@ -223,12 +236,12 @@ export default function FundaFinder() {
                           min={50000}
                           max={2000000}
                           step={10000}
-                          value={priceValue}
+                          value={field.value.split('-').map(Number)}
                           onValueChange={(value) => field.onChange(value.join('-'))}
                         />
                         <div className="flex justify-between mt-4 text-lg font-semibold">
-                            <span>€{priceValue[0].toLocaleString('nl-NL')}</span>
-                            <span>€{priceValue[1].toLocaleString('nl-NL')}</span>
+                            <span>€{field.value.split('-').map(Number)[0].toLocaleString('nl-NL')}</span>
+                            <span>€{field.value.split('-').map(Number)[1].toLocaleString('nl-NL')}</span>
                         </div>
                     </div>
                   )}
@@ -237,7 +250,7 @@ export default function FundaFinder() {
         );
       case 3:
         return (
-            <motion.div key="step-3" {...motionProps} className="space-y-12">
+            <motion.div {...props} className="space-y-12">
                 <div>
                     <Label className="text-xl font-medium mb-12 flex items-center gap-2"><Ruler className="w-6 h-6 text-primary"/>Minimum floor area?</Label>
                     <Controller
@@ -250,10 +263,10 @@ export default function FundaFinder() {
                             min={20}
                             max={300}
                             step={5}
-                            value={areaValue}
+                            value={[parseInt(field.value)]}
                             onValueChange={(value) => field.onChange(`${value[0]}-`)}
                         />
-                        <div className="text-center mt-4 text-lg font-semibold">{areaValue[0]}+ m²</div>
+                        <div className="text-center mt-4 text-lg font-semibold">{parseInt(field.value)}+ m²</div>
                         </div>
                     )}
                     />
@@ -270,10 +283,10 @@ export default function FundaFinder() {
                             min={1}
                             max={6}
                             step={1}
-                            value={bedroomsValue}
+                            value={[parseInt(field.value)]}
                             onValueChange={(value) => field.onChange(`${value[0]}-`)}
                         />
-                        <div className="text-center mt-4 text-lg font-semibold">{bedroomsValue[0]}+ bedrooms</div>
+                        <div className="text-center mt-4 text-lg font-semibold">{parseInt(field.value)}+ bedrooms</div>
                         </div>
                     )}
                     />
@@ -282,7 +295,7 @@ export default function FundaFinder() {
         );
       case 4:
         return (
-            <motion.div key="step-4" {...motionProps} className="space-y-8">
+            <motion.div {...props} className="space-y-8">
                 <div>
                     <Label className="text-xl font-medium mb-4 flex items-center gap-2"><Zap className="w-6 h-6 text-primary"/>Preferred energy labels?</Label>
                     <Controller
@@ -316,12 +329,12 @@ export default function FundaFinder() {
                         name="construction_period"
                         control={control}
                         render={({ field }) => (
-                             <Select onValueChange={(value) => field.onChange(value ? [value] : [])} value={field.value?.[0] || ''}>
+                             <Select onValueChange={(value) => field.onChange(value ? [value] : [])} value={field.value?.[0] || 'any'}>
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Any period" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Any period</SelectItem>
+                                    <SelectItem value="any">Any period</SelectItem>
                                     {Object.entries(CONSTRUCTION_PERIODS).map(([key, value]) => (
                                         <SelectItem key={key} value={key}>{value}</SelectItem>
                                     ))}
@@ -334,7 +347,7 @@ export default function FundaFinder() {
         );
       case 5:
         return (
-            <motion.div key="step-5" {...motionProps}>
+            <motion.div {...props}>
                 <h2 className="text-3xl font-headline mb-8 text-center">Ready to find your home?</h2>
                 <p className="text-muted-foreground text-center mb-8">Click the button below to see properties that match your criteria.</p>
             </motion.div>
@@ -389,7 +402,7 @@ export default function FundaFinder() {
           )}
 
           {step > 0 && step < TOTAL_STEPS - 1 && (
-            <Button type="button" onClick={() => nextStep()}>
+            <Button type="button" onClick={nextStep}>
               Next <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}

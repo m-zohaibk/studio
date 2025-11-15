@@ -6,21 +6,14 @@ import { fetchFundaResults } from '@/app/actions';
 import PropertyCard from './PropertyCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { validateAndStructurePropertyQuery, ValidateAndStructurePropertyQueryInput, ValidateAndStructurePropertyQueryOutput } from '@/ai/flows/validate-and-structure-property-query';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
-  const [searchParams, setSearchParams] = useState<{
-    selected_area: string[];
-    price: string;
-    availability: string[];
-    floor_area: string;
-    bedrooms: string;
-    energy_label: string[];
-    construction_period: string[];
-  }>({
-    selected_area: [],
+  const [searchParams, setSearchParams] = useState<ValidateAndStructurePropertyQueryInput>({
+    selected_area: '',
     price: '',
-    availability: [],
+    availability: '',
     floor_area: '',
     bedrooms: '',
     energy_label: [],
@@ -30,6 +23,7 @@ const HomeFindingAgent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [finalUrl, setFinalUrl] = useState('');
 
   const questions = [
     {
@@ -135,57 +129,72 @@ const HomeFindingAgent = () => {
   const handleSelection = (value: string) => {
     const questionId = currentQuestion.id as keyof typeof searchParams;
     
-    if (currentQuestion.type === 'text_input') {
-      const locations = value.split(',').map(item => item.trim().toLowerCase()).filter(item => item);
-      setSearchParams({ ...searchParams, [questionId]: locations });
-    } else if (currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') {
-      const currentValues = searchParams[questionId] as string[] || [];
+    if (currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') {
+      const currentValues = (searchParams[questionId] as string[]) || [];
       const newValues = currentValues.includes(value)
         ? currentValues.filter(v => v !== value)
         : [...currentValues, value];
-      setSearchParams({ ...searchParams, [questionId]: newValues });
+      
+      const newAvailability = newValues.join(',');
+
+      if (questionId === 'availability') {
+        setSearchParams({ ...searchParams, [questionId]: newAvailability });
+      } else {
+        setSearchParams({ ...searchParams, [questionId]: newValues });
+      }
+
     } else {
       setSearchParams({ ...searchParams, [questionId]: value as never });
     }
   };
 
-  const buildFundaUrl = () => {
+  const buildFundaUrl = (structuredParams: ValidateAndStructurePropertyQueryOutput) => {
     let url = 'https://www.funda.nl/en/zoeken/koop?';
     const params: string[] = [];
+    
+    if (structuredParams.selected_area.length > 0) {
+      params.push(`selected_area=${JSON.stringify(structuredParams.selected_area)}`);
+    }
+    if (structuredParams.price) {
+      params.push(`price="${structuredParams.price}"`);
+    }
+    if (structuredParams.availability.length > 0) {
+      params.push(`availability=${JSON.stringify(structuredParams.availability)}`);
+    }
+    if (structuredParams.floor_area) {
+      params.push(`floor_area="${structuredParams.floor_area}"`);
+    }
+    if (structuredParams.bedrooms) {
+      params.push(`bedrooms="${structuredParams.bedrooms}"`);
+    }
+    if (structuredParams.energy_label.length > 0) {
+      params.push(`energy_label=${JSON.stringify(structuredParams.energy_label)}`);
+    }
+    if (structuredParams.construction_period.length > 0) {
+      params.push(`construction_period=${JSON.stringify(structuredParams.construction_period)}`);
+    }
   
-    if (searchParams.selected_area.length > 0) {
-      params.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
-    }
-    if (searchParams.price) {
-      params.push(`price="${searchParams.price}"`);
-    }
-    if (searchParams.availability.length > 0) {
-      params.push(`availability=${JSON.stringify(searchParams.availability)}`);
-    }
-    if (searchParams.floor_area) {
-      params.push(`floor_area="${searchParams.floor_area}"`);
-    }
-    if (searchParams.bedrooms) {
-      params.push(`bedrooms="${searchParams.bedrooms}"`);
-    }
-    if (searchParams.energy_label.length > 0) {
-      params.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
-    }
-    if (searchParams.construction_period.length > 0) {
-      params.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
-    }
-  
-    return `${url}${params.join('&')}`;
+    const finalUrl = `${url}${params.join('&')}`;
+    setFinalUrl(finalUrl);
+    return finalUrl;
   };
 
   const handleFindHome = async () => {
     setIsLoading(true);
     setError(null);
     setResults([]);
-    const url = buildFundaUrl();
+    
     try {
+      // Step 1: Send user input to the AI workflow for validation and structuring.
+      const structuredParams = await validateAndStructurePropertyQuery(searchParams);
+
+      // Step 2: Build the URL using the structured data returned by the AI.
+      const url = buildFundaUrl(structuredParams);
+      
+      // Step 3: Fetch the results from Funda.
       const scrapedResults = await fetchFundaResults(url);
       setResults(scrapedResults);
+
     } catch (e: any) {
       setError(e.message || "An error occurred while fetching results.");
     } finally {
@@ -212,9 +221,9 @@ const HomeFindingAgent = () => {
     setShowResults(false);
     setStep(0);
     setSearchParams({
-      selected_area: [],
+      selected_area: '',
       price: '',
-      availability: [],
+      availability: '',
       floor_area: '',
       bedrooms: '',
       energy_label: [],
@@ -222,11 +231,7 @@ const HomeFindingAgent = () => {
     });
     setResults([]);
     setError(null);
-  };
-
-
-  const getFormattedOutput = () => {
-    return JSON.stringify(searchParams, null, 2);
+    setFinalUrl('');
   };
 
   const isCurrentStepValid = () => {
@@ -259,7 +264,7 @@ const HomeFindingAgent = () => {
             </h2>
             <div className="flex gap-4">
                 <button
-                    onClick={() => window.open(buildFundaUrl(), '_blank')}
+                    onClick={() => window.open(finalUrl, '_blank')}
                     className="bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all border border-gray-300"
                 >
                     View on Funda Website
@@ -302,7 +307,7 @@ const HomeFindingAgent = () => {
       return (
         <input
           type="text"
-          value={searchParams.selected_area.join(', ')}
+          value={searchParams.selected_area}
           onChange={(e) => handleSelection(e.target.value)}
           placeholder={currentQuestion.placeholder}
           className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -335,7 +340,7 @@ const HomeFindingAgent = () => {
     
     return currentQuestion.options.map((option) => {
         const isSelected = currentQuestion.type === 'multiselect'
-            ? (searchParams[currentQuestion.id as 'construction_period' | 'availability'])?.includes(option.value)
+            ? (searchParams[currentQuestion.id as 'construction_period' | 'availability'] as string[])?.includes(option.value)
             : searchParams[currentQuestion.id as 'price' | 'bedrooms' | 'floor_area'] === option.value;
 
         return (

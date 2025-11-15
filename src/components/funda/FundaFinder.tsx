@@ -202,7 +202,7 @@ export default function FundaFinder() {
             <Home className="mx-auto h-16 w-16 text-primary mb-4" />
             <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Welcome to Funda Finder</h1>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">Let's find your dream home. We'll ask a few questions to tailor the search for you.</p>
-            <Button size="lg" onClick={nextStep}>
+            <Button size="lg" type="button" onClick={nextStep}>
               Start Searching <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </motion.div>
@@ -348,7 +348,7 @@ export default function FundaFinder() {
             <motion.div key={step} {...motionProps}>
                 <h2 className="text-3xl font-headline mb-8 text-center">Ready to find your home?</h2>
                 <div className="flex justify-center">
-                    <Button type="submit" size="lg" variant="accent" disabled={isLoading}>
+                    <Button type="submit" size="lg" disabled={isLoading}>
                       {isLoading ? (
                         <>
                           <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
@@ -421,3 +421,5 @@ export default function FundaFinder() {
     </Card>
   );
 }
+
+    

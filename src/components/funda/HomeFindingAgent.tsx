@@ -157,14 +157,12 @@ const HomeFindingAgent = () => {
   };
 
   const buildFundaUrl = () => {
-    const baseUrl = 'https://www.funda.nl/en/zoeken/koop/';
+    const baseUrl = 'https://www.funda.nl/en/zoeken/koop?';
     const params = new URLSearchParams();
-    
-    // Funda uses the path for the location, not a query param
-    const locationPath = searchParams.selected_area.length > 0 
-      ? searchParams.selected_area.join('+') + '/'
-      : '';
 
+    if (searchParams.selected_area.length > 0) {
+      params.append('selected_area', JSON.stringify(searchParams.selected_area));
+    }
     if (searchParams.price) {
       params.append('price', `${searchParams.price}`);
     }
@@ -185,7 +183,7 @@ const HomeFindingAgent = () => {
       params.append('construction_period', JSON.stringify(searchParams.construction_period));
     }
 
-    return `${baseUrl}${locationPath}?${params.toString().replace(/%22/g, '')}`;
+    return `${baseUrl}${params.toString().replace(/%22/g, '')}`;
   };
 
 
@@ -299,7 +297,7 @@ const HomeFindingAgent = () => {
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={searchParams[currentQuestion.id as 'selected_area']?.[0] || ''}
+                value={searchParams.selected_area.join(', ') || ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"

@@ -22,3 +22,5 @@ export const AVAILABILITY_OPTIONS = {
 };
 
 export const TOTAL_STEPS = 6;
+
+    

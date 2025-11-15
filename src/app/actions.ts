@@ -11,6 +11,10 @@ export async function getStructuredQuery(input: ValidateAndStructurePropertyQuer
     return structuredQuery;
   } catch (error) {
     console.error("Error structuring query with GenAI:", error);
+    // It's often better to throw the error to be handled by the calling UI component
+    // This allows for more specific error messages to the user.
     throw new Error("I'm sorry, I encountered a problem processing your request. Please try again.");
   }
 }
+
+    

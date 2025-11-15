@@ -111,10 +111,10 @@ export default function FundaFinder() {
 
   const onSubmit = async (data: PropertyQuery) => {
     setIsLoading(true);
+    setStep(TOTAL_STEPS); // Move to a dedicated loading step
     try {
       const query = {
         ...data,
-        price: data.price.replace(/,/g, '-'),
       };
       const structured = await getStructuredQuery(query);
       setStructuredQuery(structured);
@@ -126,6 +126,7 @@ export default function FundaFinder() {
         description: error.message || 'Failed to get results. Please try again.',
       });
       setIsLoading(false);
+      setStep(TOTAL_STEPS - 1); // Go back to the last form step on error
     }
   };
   
@@ -147,7 +148,7 @@ export default function FundaFinder() {
     ][step] as (keyof PropertyQuery)[];
     
     const isValid = await trigger(fields);
-    if(isValid) setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
+    if(isValid) setStep((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
   };
   
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
@@ -182,7 +183,7 @@ export default function FundaFinder() {
             <Home className="mx-auto h-16 w-16 text-primary mb-4" />
             <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Welcome to Funda Finder</h1>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">Let's find your dream home. We'll ask a few questions to tailor the search for you.</p>
-            <Button size="lg" onClick={nextStep} variant="accent">
+            <Button size="lg" onClick={nextStep}>
               Start Searching <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </motion.div>
@@ -328,9 +329,13 @@ export default function FundaFinder() {
             <motion.div key={key} {...restMotionProps}>
                 <h2 className="text-3xl font-headline mb-8 text-center">Ready to find your home?</h2>
                 <div className="flex justify-center">
-                    <Button type="submit" size="lg" variant="accent">
-                        <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
-                        Analyzing your preferences...
+                    <Button type="submit" size="lg" variant="accent" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : "Find Properties" }
                     </Button>
                 </div>
             </motion.div>
@@ -342,7 +347,7 @@ export default function FundaFinder() {
 
   if (isLoading && !results) {
     return (
-        <div className="flex flex-col items-center justify-center text-center p-8">
+        <div className="flex flex-col items-center justify-center text-center p-8 min-h-[550px]">
             <LoaderCircle className="w-16 h-16 animate-spin text-primary mb-6" />
             <h1 className="text-3xl font-headline mb-2">Finding Properties...</h1>
             <p className="text-muted-foreground">Our AI is analyzing your preferences.</p>
@@ -360,9 +365,9 @@ export default function FundaFinder() {
         <CardHeader>
           {step > 0 && (
             <>
-              <Progress value={(step / TOTAL_STEPS) * 100} className="w-full mb-4" />
+              <Progress value={(step / (TOTAL_STEPS - 1)) * 100} className="w-full mb-4" />
               <CardTitle className="font-headline text-2xl">Funda Finder</CardTitle>
-              <CardDescription>Step {step} of {TOTAL_STEPS}</CardDescription>
+              <CardDescription>Step {step} of {TOTAL_STEPS - 1}</CardDescription>
             </>
           )}
         </CardHeader>
@@ -377,14 +382,19 @@ export default function FundaFinder() {
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           ) : <div></div>}
-          {step > 0 && step < TOTAL_STEPS -1 ? (
+          {step > 0 && step < TOTAL_STEPS - 1 ? (
             <Button type="button" onClick={nextStep}>
               Next <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : null}
-          {step === TOTAL_STEPS -1 && (
-            <Button type="submit" variant="accent">
-              Find Properties
+          {step === TOTAL_STEPS - 1 && (
+            <Button type="submit" variant="accent" disabled={isLoading}>
+              {isLoading ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : "Find Properties" }
             </Button>
           )}
         </CardFooter>
@@ -392,3 +402,5 @@ export default function FundaFinder() {
     </Card>
   );
 }
+
+    

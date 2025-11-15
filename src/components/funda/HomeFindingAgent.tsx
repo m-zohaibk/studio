@@ -116,8 +116,8 @@ const HomeFindingAgent = () => {
     const questionId = currentQuestion.id;
     
     if (currentQuestion.type === 'text_input') {
-      // For text input, store as array with single value
-      setSearchParams({ ...searchParams, [questionId]: [value.toLowerCase().trim()] });
+      const locations = value.split(',').map(item => item.trim().toLowerCase()).filter(item => item);
+      setSearchParams({ ...searchParams, [questionId]: locations });
     } else if (currentQuestion.type === 'multiselect') {
       const currentValues = searchParams[questionId] || [];
       const newValues = currentValues.includes(value)
@@ -284,7 +284,7 @@ const HomeFindingAgent = () => {
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={(searchParams[currentQuestion.id] && Array.isArray(searchParams[currentQuestion.id])) ? searchParams[currentQuestion.id][0] || '' : ''}
+                value={(searchParams[currentQuestion.id] && Array.isArray(searchParams[currentQuestion.id])) ? searchParams[currentQuestion.id].join(', ') : ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -346,5 +346,3 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
-
-    

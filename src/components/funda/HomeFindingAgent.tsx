@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, LoaderCircle } from 'lucide-react';
 import { fetchFundaResults } from '@/app/actions';
 import PropertyCard from './PropertyCard';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
@@ -91,7 +93,7 @@ const HomeFindingAgent = () => {
       id: 'energy_label',
       question: "What energy efficiency rating do you prefer?",
       icon: Zap,
-      type: 'multiselect',
+      type: 'multiselect_checkbox',
       options: [
         { value: 'A%2B%2B%2B%2B%2B', label: 'A+++++' },
         { value: 'A%2B%2B%2B%2B', label: 'A++++' },
@@ -136,7 +138,7 @@ const HomeFindingAgent = () => {
     if (currentQuestion.type === 'text_input') {
       const locations = value.split(',').map(item => item.trim().toLowerCase()).filter(item => item);
       setSearchParams({ ...searchParams, [questionId]: locations });
-    } else if (currentQuestion.type === 'multiselect') {
+    } else if (currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') {
       const currentValues = searchParams[questionId] as string[] || [];
       const newValues = currentValues.includes(value)
         ? currentValues.filter(v => v !== value)
@@ -150,7 +152,7 @@ const HomeFindingAgent = () => {
   const buildFundaUrl = () => {
     let url = 'https://www.funda.nl/en/zoeken/koop?';
     const params: string[] = [];
-
+  
     if (searchParams.selected_area.length > 0) {
       params.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
     }
@@ -172,7 +174,7 @@ const HomeFindingAgent = () => {
     if (searchParams.construction_period.length > 0) {
       params.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
     }
-
+  
     return `${url}${params.join('&')}`;
   };
 
@@ -295,6 +297,69 @@ const HomeFindingAgent = () => {
 
   const Icon = currentQuestion.icon;
 
+  const renderInput = () => {
+    if (currentQuestion.type === 'text_input') {
+      return (
+        <input
+          type="text"
+          value={searchParams.selected_area.join(', ')}
+          onChange={(e) => handleSelection(e.target.value)}
+          placeholder={currentQuestion.placeholder}
+          className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
+        />
+      );
+    }
+
+    if (currentQuestion.type === 'multiselect_checkbox') {
+        const questionId = currentQuestion.id as 'energy_label';
+        return (
+            <div className="grid grid-cols-4 gap-2">
+                {currentQuestion.options.map(option => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={option.value}
+                            checked={(searchParams[questionId] as string[])?.includes(option.value)}
+                            onCheckedChange={() => handleSelection(option.value)}
+                        />
+                        <Label
+                            htmlFor={option.value}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            {option.label}
+                        </Label>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    
+    return currentQuestion.options.map((option) => {
+        const isSelected = currentQuestion.type === 'multiselect'
+            ? (searchParams[currentQuestion.id as 'construction_period' | 'availability'])?.includes(option.value)
+            : searchParams[currentQuestion.id as 'price' | 'bedrooms' | 'floor_area'] === option.value;
+
+        return (
+            <button
+                key={option.value}
+                onClick={() => handleSelection(option.value)}
+                className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
+                    isSelected
+                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
+                }`}
+            >
+                <div className="flex items-center justify-between">
+                    <span>{option.label}</span>
+                    {isSelected && (
+                        <CheckCircle className="w-5 h-5 text-blue-600" />
+                    )}
+                </div>
+            </button>
+        );
+    });
+};
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-2xl mx-auto">
@@ -328,40 +393,7 @@ const HomeFindingAgent = () => {
           </div>
 
           <div className="space-y-3">
-            {currentQuestion.type === 'text_input' ? (
-              <input
-                type="text"
-                value={searchParams.selected_area.join(', ')}
-                onChange={(e) => handleSelection(e.target.value)}
-                placeholder={currentQuestion.placeholder}
-                className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
-              />
-            ) : (
-              currentQuestion.options.map((option) => {
-                const isSelected = currentQuestion.type === 'multiselect'
-                  ? (searchParams[currentQuestion.id as 'energy_label' | 'construction_period' | 'availability'])?.includes(option.value)
-                  : searchParams[currentQuestion.id as 'price' | 'bedrooms' | 'floor_area'] === option.value;
-
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleSelection(option.value)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{option.label}</span>
-                      {isSelected && (
-                        <CheckCircle className="w-5 h-5 text-blue-600" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
+            {renderInput()}
           </div>
         </div>
 

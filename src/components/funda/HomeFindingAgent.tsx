@@ -1,7 +1,8 @@
-
 'use client';
 import React, { useState } from 'react';
-import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle } from 'lucide-react';
+import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, LoaderCircle } from 'lucide-react';
+import { fetchFundaResults } from '@/app/actions';
+import PropertyCard from './PropertyCard';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
@@ -23,6 +24,9 @@ const HomeFindingAgent = () => {
     construction_period: []
   });
   const [showResults, setShowResults] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const questions = [
     {
@@ -142,11 +146,68 @@ const HomeFindingAgent = () => {
     }
   };
 
+  const buildFundaUrl = () => {
+    const baseUrl = 'https://www.funda.nl/en/zoeken/koop?';
+    let queryString = '';
+    const params: string[] = [];
+
+    const formatValue = (key: string, value: any) => {
+      if (Array.isArray(value) && value.length > 0) {
+        return `${key}=${JSON.stringify(value)}`;
+      }
+      if (typeof value === 'string' && value) {
+        return `${key}="${value}"`;
+      }
+      return null;
+    };
+    
+    if (searchParams.selected_area.length > 0) {
+        params.push(`selected_area=${encodeURIComponent(JSON.stringify(searchParams.selected_area))}`);
+    }
+    if (searchParams.price) {
+        params.push(`price=${encodeURIComponent(`"${searchParams.price}"`)}`);
+    }
+    if (searchParams.availability.length > 0) {
+        params.push(`availability=${encodeURIComponent(JSON.stringify(searchParams.availability))}`);
+    }
+    if (searchParams.floor_area) {
+        params.push(`floor_area=${encodeURIComponent(`"${searchParams.floor_area}"`)}`);
+    }
+    if (searchParams.bedrooms) {
+        params.push(`bedrooms=${encodeURIComponent(`"${searchParams.bedrooms}"`)}`);
+    }
+    if (searchParams.energy_label.length > 0) {
+        const energyLabels = searchParams.energy_label.map(label => label.replace(/\+/g, '%2B'));
+        params.push(`energy_label=${encodeURIComponent(JSON.stringify(energyLabels))}`);
+    }
+    if (searchParams.construction_period.length > 0) {
+        params.push(`construction_period=${encodeURIComponent(JSON.stringify(searchParams.construction_period))}`);
+    }
+
+    return `${baseUrl}${params.join('&')}`;
+  };
+
+  const handleFindHome = async () => {
+    setIsLoading(true);
+    setError(null);
+    setResults([]);
+    const url = buildFundaUrl();
+    try {
+      const scrapedResults = await fetchFundaResults(url);
+      setResults(scrapedResults);
+    } catch (e: any) {
+      setError(e.message || "An error occurred while fetching results.");
+    } finally {
+      setIsLoading(false);
+      setShowResults(true);
+    }
+  };
+  
   const handleNext = () => {
     if (step < questions.length - 1) {
       setStep(step + 1);
     } else {
-      setShowResults(true);
+      handleFindHome();
     }
   };
 
@@ -156,34 +217,20 @@ const HomeFindingAgent = () => {
     }
   };
 
-  const buildFundaUrl = () => {
-    const baseUrl = 'https://www.funda.nl/en/zoeken/koop?';
-    const parts = [];
-
-    if (searchParams.selected_area.length > 0) {
-      parts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
-    }
-    if (searchParams.price) {
-      parts.push(`price="${searchParams.price}"`);
-    }
-    if (searchParams.availability.length > 0) {
-      parts.push(`availability=${JSON.stringify(searchParams.availability)}`);
-    }
-    if (searchParams.floor_area) {
-      parts.push(`floor_area="${searchParams.floor_area}"`);
-    }
-    if (searchParams.bedrooms) {
-      parts.push(`bedrooms="${searchParams.bedrooms}"`);
-    }
-    if (searchParams.energy_label.length > 0) {
-        const energyLabels = searchParams.energy_label.map(label => label.replace(/\+/g, '%2B'));
-        parts.push(`energy_label=${JSON.stringify(energyLabels)}`);
-    }
-    if (searchParams.construction_period.length > 0) {
-      parts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
-    }
-
-    return `${baseUrl}${parts.join('&')}`;
+  const handleStartNewSearch = () => {
+    setShowResults(false);
+    setStep(0);
+    setSearchParams({
+      selected_area: [],
+      price: '',
+      availability: [],
+      floor_area: '',
+      bedrooms: '',
+      energy_label: [],
+      construction_period: []
+    });
+    setResults([]);
+    setError(null);
   };
 
 
@@ -201,59 +248,57 @@ const HomeFindingAgent = () => {
     return value !== '';
   };
 
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center text-center p-8 min-h-screen w-full max-w-3xl mx-auto">
+            <LoaderCircle className="w-16 h-16 animate-spin text-blue-600 mb-6" />
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Finding Properties...</h1>
+            <p className="text-gray-600">Our AI is fetching the latest listings from Funda.</p>
+        </div>
+    );
+  }
+
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="flex items-center justify-center mb-6">
-              <CheckCircle className="w-16 h-16 text-green-500" />
-            </div>
-            <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
-              Your Perfect Home Search is Ready!
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold text-gray-800">
+              {results.length > 0 ? `Found ${results.length} properties` : 'No properties found'}
             </h2>
-
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Search Parameters:</h3>
-              <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
-                <pre>{getFormattedOutput()}</pre>
-              </div>
-            </div>
-
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Funda URL:</h3>
-              <div className="bg-gray-50 rounded-lg p-4 break-all text-sm text-blue-600">
-                {buildFundaUrl()}
-              </div>
-            </div>
-
             <div className="flex gap-4">
-              <button
-                onClick={() => window.open(buildFundaUrl(), '_blank')}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
-              >
-                View Homes on Funda
-              </button>
-              <button
-                onClick={() => {
-                  setShowResults(false);
-                  setStep(0);
-                  setSearchParams({
-                    selected_area: [],
-                    price: '',
-                    availability: [],
-                    floor_area: '',
-                    bedrooms: '',
-                    energy_label: [],
-                    construction_period: []
-                  });
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-              >
-                Start New Search
-              </button>
+                <button
+                    onClick={() => window.open(buildFundaUrl(), '_blank')}
+                    className="bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all border border-gray-300"
+                >
+                    View on Funda
+                </button>
+                <button
+                    onClick={handleStartNewSearch}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                    Start New Search
+                </button>
             </div>
           </div>
+          
+          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>}
+
+          {results.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {results.map((property) => (
+                <PropertyCard key={property.id} property={property} />
+              ))}
+            </div>
+          ) : !error && (
+            <div className="text-center py-16 px-4 bg-white rounded-2xl shadow-xl">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">No Properties Found</h2>
+                <p className="text-gray-600 max-w-md mx-auto">We couldn't find any properties matching your criteria. Try a broader search.</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -297,7 +342,7 @@ const HomeFindingAgent = () => {
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={searchParams.selected_area.join(', ') || ''}
+                value={searchParams.selected_area.join(', ')}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"

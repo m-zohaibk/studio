@@ -198,11 +198,13 @@ export default function FundaFinder() {
 
     const key = `step-${step}`;
     const props = {...motionProps, key};
+    const { key: motionKey, ...restProps } = props;
+
 
     switch (step) {
       case 0:
         return (
-          <motion.div {...props} className="text-center">
+          <motion.div {...restProps} key={motionKey} className="text-center">
             <Home className="mx-auto h-16 w-16 text-primary mb-4" />
             <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Welcome to Funda Finder</h1>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">Let's find your dream home. We'll ask a few questions to tailor the search for you.</p>
@@ -210,7 +212,7 @@ export default function FundaFinder() {
         );
       case 1:
         return (
-          <motion.div {...props}>
+          <motion.div {...restProps} key={motionKey}>
             <Label htmlFor="selected_area" className="text-xl font-medium mb-4 flex items-center gap-2"><Home className="w-6 h-6 text-primary"/>What city or area are you interested in?</Label>
             <Controller
               name="selected_area"
@@ -224,7 +226,7 @@ export default function FundaFinder() {
         );
       case 2:
         return (
-            <motion.div {...props}>
+            <motion.div {...restProps} key={motionKey}>
                 <Label className="text-xl font-medium mb-12 flex items-center gap-2"><CircleDollarSign className="w-6 h-6 text-primary"/>What is your price range?</Label>
                 <Controller
                   name="price"
@@ -250,7 +252,7 @@ export default function FundaFinder() {
         );
       case 3:
         return (
-            <motion.div {...props} className="space-y-12">
+            <motion.div {...restProps} key={motionKey} className="space-y-12">
                 <div>
                     <Label className="text-xl font-medium mb-12 flex items-center gap-2"><Ruler className="w-6 h-6 text-primary"/>Minimum floor area?</Label>
                     <Controller
@@ -295,7 +297,7 @@ export default function FundaFinder() {
         );
       case 4:
         return (
-            <motion.div {...props} className="space-y-8">
+            <motion.div {...restProps} key={motionKey} className="space-y-8">
                 <div>
                     <Label className="text-xl font-medium mb-4 flex items-center gap-2"><Zap className="w-6 h-6 text-primary"/>Preferred energy labels?</Label>
                     <Controller
@@ -347,7 +349,7 @@ export default function FundaFinder() {
         );
       case 5:
         return (
-            <motion.div {...props}>
+            <motion.div {...restProps} key={motionKey}>
                 <h2 className="text-3xl font-headline mb-8 text-center">Ready to find your home?</h2>
                 <p className="text-muted-foreground text-center mb-8">Click the button below to see properties that match your criteria.</p>
             </motion.div>
@@ -422,5 +424,3 @@ export default function FundaFinder() {
     </Card>
   );
 }
-
-    

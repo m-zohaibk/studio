@@ -1,3 +1,4 @@
+
 'use server';
 import * as cheerio from 'cheerio';
 
@@ -21,11 +22,11 @@ export async function fetchFundaResults(url: string) {
     $('.search-result').each((i, el) => {
       const title = $(el).find('.search-result__header-title').text().trim();
       const address = $(el).find('.search-result__header-subtitle').text().trim();
-      const price = $(el).find('.search-result-price').text().trim().replace(/\s/g, '');
+      const price = $(el).find('[data-test-id="price-wrapper"]').text().trim().replace(/\s/g, '');
       const imageUrl = $(el).find('img').attr('src');
       
       const features: string[] = [];
-       $(el).find('.search-result-kenmerken li').each((i, featureEl) => {
+       $(el).find('.search-result-kenmerken-list li').each((i, featureEl) => {
             features.push($(featureEl).text().trim());
        });
 
@@ -48,3 +49,5 @@ export async function fetchFundaResults(url: string) {
     throw new Error('Could not fetch results from Funda.');
   }
 }
+
+    

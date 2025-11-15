@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState } from 'react';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, LoaderCircle } from 'lucide-react';
@@ -92,11 +93,11 @@ const HomeFindingAgent = () => {
       icon: Zap,
       type: 'multiselect',
       options: [
-        { value: 'A+++++', label: 'A+++++' },
-        { value: 'A++++', label: 'A++++' },
-        { value: 'A+++', label: 'A+++' },
-        { value: 'A++', label: 'A++' },
-        { value: 'A+', label: 'A+' },
+        { value: 'A%2B%2B%2B%2B%2B', label: 'A+++++' },
+        { value: 'A%2B%2B%2B%2B', label: 'A++++' },
+        { value: 'A%2B%2B%2B', label: 'A+++' },
+        { value: 'A%2B%2B', label: 'A++' },
+        { value: 'A%2B', label: 'A+' },
         { value: 'A', label: 'A' },
         { value: 'B', label: 'B' },
         { value: 'C', label: 'C' },
@@ -147,44 +148,32 @@ const HomeFindingAgent = () => {
   };
 
   const buildFundaUrl = () => {
-    const baseUrl = 'https://www.funda.nl/en/zoeken/koop?';
-    let queryString = '';
+    let url = 'https://www.funda.nl/en/zoeken/koop?';
     const params: string[] = [];
 
-    const formatValue = (key: string, value: any) => {
-      if (Array.isArray(value) && value.length > 0) {
-        return `${key}=${JSON.stringify(value)}`;
-      }
-      if (typeof value === 'string' && value) {
-        return `${key}="${value}"`;
-      }
-      return null;
-    };
-    
     if (searchParams.selected_area.length > 0) {
-        params.push(`selected_area=${encodeURIComponent(JSON.stringify(searchParams.selected_area))}`);
+      params.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
     }
     if (searchParams.price) {
-        params.push(`price=${encodeURIComponent(`"${searchParams.price}"`)}`);
+      params.push(`price="${searchParams.price}"`);
     }
     if (searchParams.availability.length > 0) {
-        params.push(`availability=${encodeURIComponent(JSON.stringify(searchParams.availability))}`);
+      params.push(`availability=${JSON.stringify(searchParams.availability)}`);
     }
     if (searchParams.floor_area) {
-        params.push(`floor_area=${encodeURIComponent(`"${searchParams.floor_area}"`)}`);
+      params.push(`floor_area="${searchParams.floor_area}"`);
     }
     if (searchParams.bedrooms) {
-        params.push(`bedrooms=${encodeURIComponent(`"${searchParams.bedrooms}"`)}`);
+      params.push(`bedrooms="${searchParams.bedrooms}"`);
     }
     if (searchParams.energy_label.length > 0) {
-        const energyLabels = searchParams.energy_label.map(label => label.replace(/\+/g, '%2B'));
-        params.push(`energy_label=${encodeURIComponent(JSON.stringify(energyLabels))}`);
+      params.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
     }
     if (searchParams.construction_period.length > 0) {
-        params.push(`construction_period=${encodeURIComponent(JSON.stringify(searchParams.construction_period))}`);
+      params.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
     }
 
-    return `${baseUrl}${params.join('&')}`;
+    return `${url}${params.join('&')}`;
   };
 
   const handleFindHome = async () => {
@@ -404,3 +393,5 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
+
+    

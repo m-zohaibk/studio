@@ -284,7 +284,7 @@ const HomeFindingAgent = () => {
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={(searchParams[currentQuestion.id] && Array.isArray(searchParams[currentQuestion.id])) ? searchParams[currentQuestion.id][0] : ''}
+                value={(searchParams[currentQuestion.id] && Array.isArray(searchParams[currentQuestion.id])) ? searchParams[currentQuestion.id][0] || '' : ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -346,3 +346,5 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
+
+    

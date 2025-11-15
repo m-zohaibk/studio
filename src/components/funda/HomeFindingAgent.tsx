@@ -158,32 +158,32 @@ const HomeFindingAgent = () => {
 
   const buildFundaUrl = () => {
     const baseUrl = 'https://www.funda.nl/en/zoeken/koop?';
-    const params = new URLSearchParams();
+    const parts = [];
 
     if (searchParams.selected_area.length > 0) {
-      params.append('selected_area', JSON.stringify(searchParams.selected_area));
+      parts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
     }
     if (searchParams.price) {
-      params.append('price', `${searchParams.price}`);
+      parts.push(`price="${searchParams.price}"`);
     }
     if (searchParams.availability.length > 0) {
-      params.append('availability', JSON.stringify(searchParams.availability));
+      parts.push(`availability=${JSON.stringify(searchParams.availability)}`);
     }
     if (searchParams.floor_area) {
-      params.append('floor_area', `${searchParams.floor_area}`);
+      parts.push(`floor_area="${searchParams.floor_area}"`);
     }
     if (searchParams.bedrooms) {
-      params.append('bedrooms', `${searchParams.bedrooms}`);
+      parts.push(`bedrooms="${searchParams.bedrooms}"`);
     }
     if (searchParams.energy_label.length > 0) {
         const energyLabels = searchParams.energy_label.map(label => label.replace(/\+/g, '%2B'));
-        params.append('energy_label', JSON.stringify(energyLabels));
+        parts.push(`energy_label=${JSON.stringify(energyLabels)}`);
     }
     if (searchParams.construction_period.length > 0) {
-      params.append('construction_period', JSON.stringify(searchParams.construction_period));
+      parts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
     }
 
-    return `${baseUrl}${params.toString().replace(/%22/g, '')}`;
+    return `${baseUrl}${parts.join('&')}`;
   };
 
 

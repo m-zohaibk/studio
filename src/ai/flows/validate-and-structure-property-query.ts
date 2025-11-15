@@ -16,9 +16,9 @@ const ValidateAndStructurePropertyQueryInputSchema = z.object({
   availability: z.string().describe('The desired availability status (e.g., \"available\").'),
   floor_area: z.string().describe('The desired floor area of the property (e.g., \"80-\").'),
   bedrooms: z.string().describe('The desired number of bedrooms (e.g., \"2-\").'),
-  energy_label: z.string().describe('The desired energy label(s) for the property.'),
+  energy_label: z.array(z.string()).describe('The desired energy label(s) for the property.'),
   construction_period: z
-    .string()
+    .union([z.string(), z.array(z.string())])
     .describe('The desired construction period(s) for the property.'),
 });
 export type ValidateAndStructurePropertyQueryInput = z.infer<
@@ -70,6 +70,7 @@ const validateAndStructurePropertyQueryPrompt = ai.definePrompt({
   Output the validated and structured query parameters in the format specified by the ValidateAndStructurePropertyQueryOutputSchema.
   Make sure selected_area, availability, energy_label and construction_period parameters are arrays of strings.
   If a list parameter is already an array, leave it as is.
+  If construction_period is an empty string, output an empty array for construction_period.
   Do not make assumptions about the values contained in the input, simply pass it to the output.
   `,
 });

@@ -262,7 +262,7 @@ const HomeFindingAgent = () => {
                     onClick={() => window.open(buildFundaUrl(), '_blank')}
                     className="bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all border border-gray-300"
                 >
-                    View on Funda
+                    View on Funda Website
                 </button>
                 <button
                     onClick={handleStartNewSearch}

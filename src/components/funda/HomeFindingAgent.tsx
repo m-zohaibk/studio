@@ -6,13 +6,13 @@ import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle } f
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
   const [searchParams, setSearchParams] = useState({
-    selected_area: [],
+    selected_area: [] as string[],
     price: '',
-    availability: [],
+    availability: [] as string[],
     floor_area: '',
     bedrooms: '',
-    energy_label: [],
-    construction_period: []
+    energy_label: [] as string[],
+    construction_period: [] as string[]
   });
   const [showResults, setShowResults] = useState(false);
 
@@ -112,14 +112,14 @@ const HomeFindingAgent = () => {
 
   const currentQuestion = questions[step];
 
-  const handleSelection = (value) => {
-    const questionId = currentQuestion.id;
+  const handleSelection = (value: string) => {
+    const questionId = currentQuestion.id as keyof typeof searchParams;
     
     if (currentQuestion.type === 'text_input') {
       const locations = value.split(',').map(item => item.trim().toLowerCase()).filter(item => item);
       setSearchParams({ ...searchParams, [questionId]: locations });
     } else if (currentQuestion.type === 'multiselect') {
-      const currentValues = searchParams[questionId] || [];
+      const currentValues = searchParams[questionId] as string[] || [];
       const newValues = currentValues.includes(value)
         ? currentValues.filter(v => v !== value)
         : [...currentValues, value];
@@ -144,22 +144,25 @@ const HomeFindingAgent = () => {
   };
 
   const buildFundaUrl = () => {
+    const baseUrl = 'https://www.funda.nl/en/zoeken/koop/';
     const params = new URLSearchParams();
     
-    if (searchParams.selected_area.length > 0) {
-      params.append('selected_area', JSON.stringify(searchParams.selected_area));
-    }
+    // Funda uses the path for the location, not a query param
+    const locationPath = searchParams.selected_area.length > 0 
+      ? searchParams.selected_area.join('+') + '/'
+      : '';
+
     if (searchParams.price) {
-      params.append('price', `"${searchParams.price}"`);
+      params.append('price', `${searchParams.price}`);
     }
     if (searchParams.availability.length > 0) {
       params.append('availability', JSON.stringify(searchParams.availability));
     }
     if (searchParams.floor_area) {
-      params.append('floor_area', `"${searchParams.floor_area}"`);
+      params.append('floor_area', `${searchParams.floor_area}`);
     }
     if (searchParams.bedrooms) {
-      params.append('bedrooms', `"${searchParams.bedrooms}"`);
+      params.append('bedrooms', `${searchParams.bedrooms}`);
     }
     if (searchParams.energy_label.length > 0) {
       params.append('energy_label', JSON.stringify(searchParams.energy_label));
@@ -168,20 +171,18 @@ const HomeFindingAgent = () => {
       params.append('construction_period', JSON.stringify(searchParams.construction_period));
     }
 
-    return `https://www.funda.nl/en/zoeken/koop?${params.toString()}`;
+    return `${baseUrl}${locationPath}?${params.toString().replace(/%22/g, '')}`;
   };
+
 
   const getFormattedOutput = () => {
     return JSON.stringify(searchParams, null, 2);
   };
 
   const isCurrentStepValid = () => {
-    const questionId = currentQuestion.id;
+    const questionId = currentQuestion.id as keyof typeof searchParams;
     const value = searchParams[questionId];
     
-    if (currentQuestion.type === 'text_input') {
-      return value && value.length > 0 && value[0] !== '';
-    }
     if (Array.isArray(value)) {
         return value.length > 0;
     }
@@ -284,7 +285,7 @@ const HomeFindingAgent = () => {
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={(searchParams[currentQuestion.id] && Array.isArray(searchParams[currentQuestion.id])) ? searchParams[currentQuestion.id].join(', ') : ''}
+                value={searchParams[currentQuestion.id as keyof typeof searchParams]?.[0] || ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -292,8 +293,8 @@ const HomeFindingAgent = () => {
             ) : (
               currentQuestion.options.map((option) => {
                 const isSelected = currentQuestion.type === 'multiselect'
-                  ? (searchParams[currentQuestion.id] && Array.isArray(searchParams[currentQuestion.id])) ? searchParams[currentQuestion.id].includes(option.value) : false
-                  : searchParams[currentQuestion.id] === option.value;
+                  ? (searchParams[currentQuestion.id as keyof typeof searchParams] as string[])?.includes(option.value)
+                  : searchParams[currentQuestion.id as keyof typeof searchParams] === option.value;
 
                 return (
                   <button

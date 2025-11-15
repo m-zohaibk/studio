@@ -19,14 +19,14 @@ export async function fetchFundaResults(url: string) {
     const $ = cheerio.load(html);
 
     const properties: any[] = [];
-    $('.search-result').each((i, el) => {
-      const title = $(el).find('.search-result__header-title').text().trim();
-      const address = $(el).find('.search-result__header-subtitle').text().trim();
+    $('.search-result-main').each((i, el) => {
+      const title = $(el).find('[data-test-id="street-name-house-number"]').text().trim();
+      const address = $(el).find('[data-test-id="postal-code-city"]').text().trim();
       const price = $(el).find('[data-test-id="price-wrapper"]').text().trim().replace(/\s/g, '');
-      const imageUrl = $(el).find('img').attr('src');
+      const imageUrl = $(el).find('.search-result-image img').attr('src');
       
       const features: string[] = [];
-       $(el).find('.search-result-kenmerken-list li').each((i, featureEl) => {
+       $(el).find('[data-test-id="property-features"] li').each((i, featureEl) => {
             features.push($(featureEl).text().trim());
        });
 
@@ -49,5 +49,3 @@ export async function fetchFundaResults(url: string) {
     throw new Error('Could not fetch results from Funda.');
   }
 }
-
-    

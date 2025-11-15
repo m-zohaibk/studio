@@ -96,7 +96,7 @@ export default function FundaFinder() {
     values: initialValues || undefined,
   });
 
-  const { control, handleSubmit, trigger, getValues, watch } = form;
+  const { control, handleSubmit, trigger, getValues, watch, formState, reset } = form;
 
   const watchedValues = watch();
   
@@ -115,18 +115,20 @@ export default function FundaFinder() {
     try {
       const query = {
         ...data,
+        construction_period: data.construction_period[0] || '',
       };
       const structured = await getStructuredQuery(query);
       setStructuredQuery(structured);
-      setResults(generateDummyProperties(8));
+      setResults(generateDummyProperties(8, structured));
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'An error occurred',
         description: error.message || 'Failed to get results. Please try again.',
       });
-      setIsLoading(false);
       setStep(TOTAL_STEPS - 1); // Go back to the last form step on error
+    } finally {
+        setIsLoading(false);
     }
   };
   
@@ -135,19 +137,35 @@ export default function FundaFinder() {
     setStructuredQuery(null);
     setIsLoading(false);
     setStep(0);
+    reset({
+        selected_area: '',
+        price: '200000-750000',
+        floor_area: '50-',
+        bedrooms: '1-',
+        energy_label: [],
+        construction_period: [],
+        availability: 'available',
+    });
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn("Could not remove saved query:", error);
+    }
   };
 
   const nextStep = async () => {
-    const fields: (keyof PropertyQuery)[] = [
+    const fieldsByStep: (keyof PropertyQuery)[][] = [
         [],
         ['selected_area'],
         ['price'],
         ['floor_area', 'bedrooms'],
         ['energy_label', 'construction_period'],
         ['availability'],
-    ][step] as (keyof PropertyQuery)[];
+    ];
+    const fields = fieldsByStep[step];
     
-    const isValid = await trigger(fields);
+    // Type assertion to fix TypeScript error with trigger
+    const isValid = await trigger(fields as (keyof PropertyQuery)[] | undefined);
     if(isValid) setStep((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
   };
   
@@ -173,13 +191,11 @@ export default function FundaFinder() {
         transition: { type: "tween", ease: "easeInOut", duration: 0.4 },
         className: "w-full"
     };
-    
-    const { key, ...restMotionProps } = motionProps;
 
     switch (step) {
       case 0:
         return (
-          <motion.div key={key} {...restMotionProps} className="text-center">
+          <motion.div {...motionProps} className="text-center">
             <Home className="mx-auto h-16 w-16 text-primary mb-4" />
             <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Welcome to Funda Finder</h1>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">Let's find your dream home. We'll ask a few questions to tailor the search for you.</p>
@@ -190,7 +206,7 @@ export default function FundaFinder() {
         );
       case 1:
         return (
-          <motion.div key={key} {...restMotionProps}>
+          <motion.div {...motionProps}>
             <Label htmlFor="selected_area" className="text-xl font-medium mb-4 flex items-center gap-2"><Home className="w-6 h-6 text-primary"/>What city or area are you interested in?</Label>
             <Controller
               name="selected_area"
@@ -199,12 +215,12 @@ export default function FundaFinder() {
                 <Input id="selected_area" placeholder="e.g., Amsterdam" {...field} className="text-lg p-6"/>
               )}
             />
-            {form.formState.errors.selected_area && <p className="text-destructive mt-2">{form.formState.errors.selected_area.message}</p>}
+            {formState.errors.selected_area && <p className="text-destructive mt-2">{formState.errors.selected_area.message}</p>}
           </motion.div>
         );
       case 2:
         return (
-            <motion.div key={key} {...restMotionProps}>
+            <motion.div {...motionProps}>
                 <Label className="text-xl font-medium mb-12 flex items-center gap-2"><CircleDollarSign className="w-6 h-6 text-primary"/>What is your price range?</Label>
                 <Controller
                   name="price"
@@ -230,7 +246,7 @@ export default function FundaFinder() {
         );
       case 3:
         return (
-            <motion.div key={key} {...restMotionProps} className="space-y-12">
+            <motion.div {...motionProps} className="space-y-12">
                 <div>
                     <Label className="text-xl font-medium mb-12 flex items-center gap-2"><Ruler className="w-6 h-6 text-primary"/>Minimum floor area?</Label>
                     <Controller
@@ -275,7 +291,7 @@ export default function FundaFinder() {
         );
       case 4:
         return (
-            <motion.div key={key} {...restMotionProps} className="space-y-8">
+            <motion.div {...motionProps} className="space-y-8">
                 <div>
                     <Label className="text-xl font-medium mb-4 flex items-center gap-2"><Zap className="w-6 h-6 text-primary"/>Preferred energy labels?</Label>
                     <Controller
@@ -290,7 +306,7 @@ export default function FundaFinder() {
                                             checked={field.value?.includes(label)}
                                             onCheckedChange={(checked) => {
                                                 return checked
-                                                ? field.onChange([...field.value, label])
+                                                ? field.onChange([...(field.value || []), label])
                                                 : field.onChange(field.value?.filter((value) => value !== label))
                                             }}
                                         />
@@ -326,7 +342,7 @@ export default function FundaFinder() {
         );
       case 5:
         return (
-            <motion.div key={key} {...restMotionProps}>
+            <motion.div {...motionProps}>
                 <h2 className="text-3xl font-headline mb-8 text-center">Ready to find your home?</h2>
                 <div className="flex justify-center">
                     <Button type="submit" size="lg" variant="accent" disabled={isLoading}>
@@ -345,7 +361,7 @@ export default function FundaFinder() {
     }
   };
 
-  if (isLoading && !results) {
+  if (isLoading && step === TOTAL_STEPS) {
     return (
         <div className="flex flex-col items-center justify-center text-center p-8 min-h-[550px]">
             <LoaderCircle className="w-16 h-16 animate-spin text-primary mb-6" />
@@ -402,5 +418,3 @@ export default function FundaFinder() {
     </Card>
   );
 }
-
-    

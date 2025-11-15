@@ -5,14 +5,22 @@ import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle } f
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
-  const [searchParams, setSearchParams] = useState({
-    selected_area: [] as string[],
+  const [searchParams, setSearchParams] = useState<{
+    selected_area: string[];
+    price: string;
+    availability: string[];
+    floor_area: string;
+    bedrooms: string;
+    energy_label: string[];
+    construction_period: string[];
+  }>({
+    selected_area: [],
     price: '',
-    availability: [] as string[],
+    availability: [],
     floor_area: '',
     bedrooms: '',
-    energy_label: [] as string[],
-    construction_period: [] as string[]
+    energy_label: [],
+    construction_period: []
   });
   const [showResults, setShowResults] = useState(false);
 
@@ -45,7 +53,7 @@ const HomeFindingAgent = () => {
       type: 'multiselect',
       options: [
         { value: 'available', label: 'Available now' },
-        { value: 'negotiable', label: 'Negotiable' }
+        { value: 'negotiations', label: 'Under negotiation' }
       ]
     },
     {
@@ -80,13 +88,18 @@ const HomeFindingAgent = () => {
       icon: Zap,
       type: 'multiselect',
       options: [
+        { value: 'A+++++', label: 'A+++++' },
         { value: 'A++++', label: 'A++++' },
         { value: 'A+++', label: 'A+++' },
         { value: 'A++', label: 'A++' },
         { value: 'A+', label: 'A+' },
         { value: 'A', label: 'A' },
         { value: 'B', label: 'B' },
-        { value: 'C', label: 'C' }
+        { value: 'C', label: 'C' },
+        { value: 'D', label: 'D' },
+        { value: 'E', label: 'E' },
+        { value: 'F', label: 'F' },
+        { value: 'G', label: 'G' }
       ]
     },
     {
@@ -125,7 +138,7 @@ const HomeFindingAgent = () => {
         : [...currentValues, value];
       setSearchParams({ ...searchParams, [questionId]: newValues });
     } else {
-      setSearchParams({ ...searchParams, [questionId]: value });
+      setSearchParams({ ...searchParams, [questionId]: value as never });
     }
   };
 
@@ -165,7 +178,8 @@ const HomeFindingAgent = () => {
       params.append('bedrooms', `${searchParams.bedrooms}`);
     }
     if (searchParams.energy_label.length > 0) {
-      params.append('energy_label', JSON.stringify(searchParams.energy_label));
+        const energyLabels = searchParams.energy_label.map(label => label.replace(/\+/g, '%2B'));
+        params.append('energy_label', JSON.stringify(energyLabels));
     }
     if (searchParams.construction_period.length > 0) {
       params.append('construction_period', JSON.stringify(searchParams.construction_period));
@@ -285,7 +299,7 @@ const HomeFindingAgent = () => {
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={searchParams[currentQuestion.id as keyof typeof searchParams]?.[0] || ''}
+                value={searchParams[currentQuestion.id as 'selected_area']?.[0] || ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -293,8 +307,8 @@ const HomeFindingAgent = () => {
             ) : (
               currentQuestion.options.map((option) => {
                 const isSelected = currentQuestion.type === 'multiselect'
-                  ? (searchParams[currentQuestion.id as keyof typeof searchParams] as string[])?.includes(option.value)
-                  : searchParams[currentQuestion.id as keyof typeof searchParams] === option.value;
+                  ? (searchParams[currentQuestion.id as 'energy_label' | 'construction_period' | 'availability'])?.includes(option.value)
+                  : searchParams[currentQuestion.id as 'price' | 'bedrooms' | 'floor_area'] === option.value;
 
                 return (
                   <button

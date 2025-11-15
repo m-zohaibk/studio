@@ -3,18 +3,19 @@
 /**
  * @fileOverview Validates and structures user property preferences for Funda search.
  *
- * - validateAndStructurePropertyQuery - Validates and structures the property query.
  * - ValidateAndStructurePropertyQueryInput - Input type for the function.
  * - ValidateAndStructurePropertyQueryOutput - Output type for the function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+// This file is now used only for its type definitions.
+// The AI flow is no longer directly called from the component.
+
 const ValidateAndStructurePropertyQueryInputSchema = z.object({
-  selected_area: z.string().describe('The desired location(s) for the property.'),
+  selected_area: z.union([z.string(), z.array(z.string())]).describe('The desired location(s) for the property.'),
   price: z.string().describe('The desired price range for the property (e.g., \"300000-500000\").'),
-  availability: z.string().describe('The desired availability status (e.g., \"available\").'),
+  availability: z.union([z.string(), z.array(z.string())]).describe('The desired availability status (e.g., \"available\").'),
   floor_area: z.string().describe('The desired floor area of the property (e.g., \"80-\").'),
   bedrooms: z.string().describe('The desired number of bedrooms (e.g., \"2-\").'),
   energy_label: z.array(z.string()).describe('The desired energy label(s) for the property.'),
@@ -42,51 +43,5 @@ const ValidateAndStructurePropertyQueryOutputSchema = z.object({
 export type ValidateAndStructurePropertyQueryOutput = z.infer<
   typeof ValidateAndStructurePropertyQueryOutputSchema
 >;
-
-export async function validateAndStructurePropertyQuery(
-  input: ValidateAndStructurePropertyQueryInput
-): Promise<ValidateAndStructurePropertyQueryOutput> {
-  return validateAndStructurePropertyQueryFlow(input);
-}
-
-const validateAndStructurePropertyQueryPrompt = ai.definePrompt({
-  name: 'validateAndStructurePropertyQueryPrompt',
-  input: {schema: ValidateAndStructurePropertyQueryInputSchema},
-  output: {schema: ValidateAndStructurePropertyQueryOutputSchema},
-  prompt: `You are an expert in structuring property search queries for Funda, a Dutch real estate website.
-
-  The user will provide their property preferences, and you must validate and structure them into a format compatible with Funda's search parameters.
-  Ensure that numerical values (price, floor_area, bedrooms) are correctly formatted as strings.
-  Convert list-based inputs (selected_area, availability, energy_label, construction_period) into arrays of strings.
-
-  User Preferences:
-  selected_area: {{{selected_area}}}
-  price: {{{price}}}
-  availability: {{{availability}}}
-  floor_area: {{{floor_area}}}
-  bedrooms: {{{bedrooms}}}
-  energy_label: {{{energy_label}}}
-  construction_period: {{{construction_period}}}
-
-  Output the validated and structured query parameters in the format specified by the ValidateAndStructurePropertyQueryOutputSchema.
-  Make sure selected_area, availability, energy_label and construction_period parameters are arrays of strings.
-  If a list parameter is already an array, leave it as is.
-  If construction_period is an empty string or an empty array, output an empty array for construction_period.
-  If a string input for a list parameter (like selected_area) contains multiple items, split them into an array. For example, "amsterdam, utrecht" should become ["amsterdam", "utrecht"].
-  Do not make assumptions about the values contained in the input, simply pass it to the output, formatting it correctly.
-  `,
-});
-
-const validateAndStructurePropertyQueryFlow = ai.defineFlow(
-  {
-    name: 'validateAndStructurePropertyQueryFlow',
-    inputSchema: ValidateAndStructurePropertyQueryInputSchema,
-    outputSchema: ValidateAndStructurePropertyQueryOutputSchema,
-  },
-  async input => {
-    const {output} = await validateAndStructurePropertyQueryPrompt(input);
-    return output!;
-  }
-);
 
     

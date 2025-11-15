@@ -6,7 +6,7 @@ import { fetchFundaResults } from '@/app/actions';
 import PropertyCard from './PropertyCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { validateAndStructurePropertyQuery, ValidateAndStructurePropertyQueryInput, ValidateAndStructurePropertyQueryOutput } from '@/ai/flows/validate-and-structure-property-query';
+import { ValidateAndStructurePropertyQueryInput, ValidateAndStructurePropertyQueryOutput } from '@/ai/flows/validate-and-structure-property-query';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
@@ -148,33 +148,39 @@ const HomeFindingAgent = () => {
     }
   };
 
-  const buildFundaUrl = (structuredParams: ValidateAndStructurePropertyQueryOutput) => {
+  const buildFundaUrl = (paramsToBuild: ValidateAndStructurePropertyQueryOutput) => {
     let url = 'https://www.funda.nl/en/zoeken/koop?';
-    const params: string[] = [];
+    const queryParts: string[] = [];
+
+    // This logic correctly formats each parameter.
+    // It is important not to use URLSearchParams which can double-encode values.
     
-    if (structuredParams.selected_area.length > 0) {
-      params.push(`selected_area=${JSON.stringify(structuredParams.selected_area)}`);
+    if (paramsToBuild.selected_area && paramsToBuild.selected_area.length > 0) {
+      // Split comma-separated string into an array for proper formatting
+      const areas = Array.isArray(paramsToBuild.selected_area) ? paramsToBuild.selected_area : paramsToBuild.selected_area.split(',').map(s => s.trim());
+      queryParts.push(`selected_area=${JSON.stringify(areas)}`);
     }
-    if (structuredParams.price) {
-      params.push(`price="${structuredParams.price}"`);
+    if (paramsToBuild.price) {
+      queryParts.push(`price=${JSON.stringify(paramsToBuild.price)}`);
     }
-    if (structuredParams.availability.length > 0) {
-      params.push(`availability=${JSON.stringify(structuredParams.availability)}`);
+    if (paramsToBuild.availability && paramsToBuild.availability.length > 0) {
+      const availability = Array.isArray(paramsToBuild.availability) ? paramsToBuild.availability : paramsToBuild.availability.split(',').map(s => s.trim());
+      queryParts.push(`availability=${JSON.stringify(availability)}`);
     }
-    if (structuredParams.floor_area) {
-      params.push(`floor_area="${structuredParams.floor_area}"`);
+    if (paramsToBuild.floor_area) {
+      queryParts.push(`floor_area=${JSON.stringify(paramsToBuild.floor_area)}`);
     }
-    if (structuredParams.bedrooms) {
-      params.push(`bedrooms="${structuredParams.bedrooms}"`);
+    if (paramsToBuild.bedrooms) {
+      queryParts.push(`bedrooms=${JSON.stringify(paramsToBuild.bedrooms)}`);
     }
-    if (structuredParams.energy_label.length > 0) {
-      params.push(`energy_label=${JSON.stringify(structuredParams.energy_label)}`);
+    if (paramsToBuild.energy_label && paramsToBuild.energy_label.length > 0) {
+      queryParts.push(`energy_label=${JSON.stringify(paramsToBuild.energy_label)}`);
     }
-    if (structuredParams.construction_period.length > 0) {
-      params.push(`construction_period=${JSON.stringify(structuredParams.construction_period)}`);
+    if (paramsToBuild.construction_period && paramsToBuild.construction_period.length > 0) {
+      queryParts.push(`construction_period=${JSON.stringify(paramsToBuild.construction_period)}`);
     }
   
-    const finalUrl = `${url}${params.join('&')}`;
+    const finalUrl = `${url}${queryParts.join('&')}`;
     setFinalUrl(finalUrl);
     return finalUrl;
   };
@@ -185,13 +191,28 @@ const HomeFindingAgent = () => {
     setResults([]);
     
     try {
-      // Step 1: Send user input to the AI workflow for validation and structuring.
-      const structuredParams = await validateAndStructurePropertyQuery(searchParams);
+      // ** PATTERN FOR OPUS INTEGRATION **
+      // 1. Send your collected data to your Opus workflow endpoint.
+      // const opusResponse = await fetch('YOUR_OPUS_WORKFLOW_URL', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(searchParams),
+      // });
+      // const structuredParams = await opusResponse.json();
+      
+      // For now, we will simulate the response by directly using the collected params.
+      // Replace this line with the actual call to your Opus workflow.
+      const structuredParams = {
+        ...searchParams,
+        selected_area: Array.isArray(searchParams.selected_area) ? searchParams.selected_area : searchParams.selected_area.split(',').map(s => s.trim()),
+        availability: Array.isArray(searchParams.availability) ? searchParams.availability : searchParams.availability.split(',').map(s => s.trim()),
+      } as ValidateAndStructurePropertyQueryOutput;
 
-      // Step 2: Build the URL using the structured data returned by the AI.
+
+      // 2. Build the URL using the data returned from your Opus workflow.
       const url = buildFundaUrl(structuredParams);
       
-      // Step 3: Fetch the results from Funda.
+      // 3. Fetch the results from Funda using the generated URL.
       const scrapedResults = await fetchFundaResults(url);
       setResults(scrapedResults);
 
@@ -307,7 +328,7 @@ const HomeFindingAgent = () => {
       return (
         <input
           type="text"
-          value={searchParams.selected_area}
+          value={searchParams.selected_area as string}
           onChange={(e) => handleSelection(e.target.value)}
           placeholder={currentQuestion.placeholder}
           className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -339,9 +360,10 @@ const HomeFindingAgent = () => {
     }
     
     return currentQuestion.options.map((option) => {
-        const isSelected = currentQuestion.type === 'multiselect'
-            ? (searchParams[currentQuestion.id as 'construction_period' | 'availability'] as string[])?.includes(option.value)
-            : searchParams[currentQuestion.id as 'price' | 'bedrooms' | 'floor_area'] === option.value;
+        const questionId = currentQuestion.id as keyof ValidateAndStructurePropertyQueryInput;
+        const isSelected = currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox'
+            ? (searchParams[questionId] as string[])?.includes(option.value)
+            : searchParams[questionId] === option.value;
 
         return (
             <button
@@ -430,5 +452,6 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
+    
 
     

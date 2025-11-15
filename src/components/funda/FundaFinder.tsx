@@ -60,6 +60,16 @@ const formSchema = z.object({
   availability: z.string().default('available'),
 });
 
+const defaultValues: PropertyQuery = {
+  selected_area: '',
+  price: '200000-750000',
+  floor_area: '50-',
+  bedrooms: '1-',
+  energy_label: [],
+  construction_period: [],
+  availability: 'available',
+};
+
 const STORAGE_KEY = 'funda-finder-query';
 
 export default function FundaFinder() {
@@ -69,37 +79,27 @@ export default function FundaFinder() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const [initialValues, setInitialValues] = useState<PropertyQuery | null>(null);
+  const form = useForm<PropertyQuery>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaultValues,
+  });
 
+  const { control, handleSubmit, trigger, watch, formState, reset } = form;
+
+  const watchedValues = watch();
+  
   useEffect(() => {
     try {
       const savedQuery = localStorage.getItem(STORAGE_KEY);
       if (savedQuery) {
-        setInitialValues(JSON.parse(savedQuery));
+        const parsedQuery = JSON.parse(savedQuery);
+        reset(parsedQuery);
       }
     } catch (error) {
       console.warn("Could not load saved query:", error);
     }
-  }, []);
-  
-  const form = useForm<PropertyQuery>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      selected_area: '',
-      price: '200000-750000',
-      floor_area: '50-',
-      bedrooms: '1-',
-      energy_label: [],
-      construction_period: [],
-      availability: 'available',
-    },
-    values: initialValues || undefined,
-  });
+  }, [reset]);
 
-  const { control, handleSubmit, trigger, getValues, watch, formState, reset } = form;
-
-  const watchedValues = watch();
-  
   useEffect(() => {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(watchedValues));
@@ -110,8 +110,10 @@ export default function FundaFinder() {
 
 
   const onSubmit = async (data: PropertyQuery) => {
-    setStep(TOTAL_STEPS); // Move to a dedicated loading step
+    setStep(TOTAL_STEPS);
     setIsLoading(true);
+    setStructuredQuery(null);
+    setResults(null);
     try {
       const query = {
         ...data,
@@ -126,7 +128,7 @@ export default function FundaFinder() {
         title: 'An error occurred',
         description: error.message || 'Failed to get results. Please try again.',
       });
-      setStep(TOTAL_STEPS - 1); // Go back to the last form step on error
+      setStep(TOTAL_STEPS - 1); 
     } finally {
         setIsLoading(false);
     }
@@ -136,41 +138,32 @@ export default function FundaFinder() {
     setResults(null);
     setStructuredQuery(null);
     setIsLoading(false);
-    setStep(0);
-    const defaultValues = {
-        selected_area: '',
-        price: '200000-750000',
-        floor_area: '50-',
-        bedrooms: '1-',
-        energy_label: [],
-        construction_period: [],
-        availability: 'available',
-    };
     reset(defaultValues);
+    setStep(0);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultValues));
+      localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      console.warn("Could not save cleared query:", error);
+      console.warn("Could not clear saved query:", error);
     }
   };
 
   const nextStep = async () => {
     const fieldsByStep: (keyof PropertyQuery)[][] = [
-        [],
-        ['selected_area'],
-        ['price'],
-        ['floor_area', 'bedrooms'],
-        ['energy_label', 'construction_period'],
-        ['availability'],
+      [],
+      ['selected_area'],
+      ['price'],
+      ['floor_area', 'bedrooms'],
+      ['energy_label', 'construction_period'],
+      ['availability'],
     ];
-    // We are at step 0, so the fields for validation are at index 1 if we proceed.
-    // If we are at step 1, fields are at index 1, etc.
-    // The welcome screen (step 0) has no fields to validate.
-    const fields = fieldsByStep[step + 1];
+
+    const currentFields = fieldsByStep[step];
+    // We only validate if there are fields to validate for the current step.
+    const isValid = currentFields.length > 0 ? await trigger(currentFields) : true;
     
-    // Type assertion to fix TypeScript error with trigger
-    const isValid = fields ? await trigger(fields as (keyof PropertyQuery)[]) : true;
-    if(isValid) setStep((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
+    if (isValid) {
+      setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
+    }
   };
   
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
@@ -180,17 +173,15 @@ export default function FundaFinder() {
   const bedroomsValue = [parseInt(watch('bedrooms'))];
 
   const renderStepContent = () => {
-    const stepVariants = {
-      hidden: { opacity: 0, x: 50 },
-      visible: { opacity: 1, x: 0 },
-      exit: { opacity: 0, x: -50 },
-    };
-    
     const motionProps = {
         initial: "hidden",
         animate: "visible",
         exit: "exit",
-        variants: stepVariants,
+        variants: {
+          hidden: { opacity: 0, x: 50 },
+          visible: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: -50 },
+        },
         transition: { type: "tween", ease: "easeInOut", duration: 0.4 },
         className: "w-full"
     };
@@ -198,18 +189,15 @@ export default function FundaFinder() {
     switch (step) {
       case 0:
         return (
-          <motion.div key={step} {...motionProps} className="text-center">
+          <motion.div key="step-0" {...motionProps} className="text-center">
             <Home className="mx-auto h-16 w-16 text-primary mb-4" />
             <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Welcome to Funda Finder</h1>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">Let's find your dream home. We'll ask a few questions to tailor the search for you.</p>
-            <Button size="lg" type="button" onClick={nextStep}>
-              Start Searching <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
           </motion.div>
         );
       case 1:
         return (
-          <motion.div key={step} {...motionProps}>
+          <motion.div key="step-1" {...motionProps}>
             <Label htmlFor="selected_area" className="text-xl font-medium mb-4 flex items-center gap-2"><Home className="w-6 h-6 text-primary"/>What city or area are you interested in?</Label>
             <Controller
               name="selected_area"
@@ -223,7 +211,7 @@ export default function FundaFinder() {
         );
       case 2:
         return (
-            <motion.div key={step} {...motionProps}>
+            <motion.div key="step-2" {...motionProps}>
                 <Label className="text-xl font-medium mb-12 flex items-center gap-2"><CircleDollarSign className="w-6 h-6 text-primary"/>What is your price range?</Label>
                 <Controller
                   name="price"
@@ -249,7 +237,7 @@ export default function FundaFinder() {
         );
       case 3:
         return (
-            <motion.div key={step} {...motionProps} className="space-y-12">
+            <motion.div key="step-3" {...motionProps} className="space-y-12">
                 <div>
                     <Label className="text-xl font-medium mb-12 flex items-center gap-2"><Ruler className="w-6 h-6 text-primary"/>Minimum floor area?</Label>
                     <Controller
@@ -294,7 +282,7 @@ export default function FundaFinder() {
         );
       case 4:
         return (
-            <motion.div key={step} {...motionProps} className="space-y-8">
+            <motion.div key="step-4" {...motionProps} className="space-y-8">
                 <div>
                     <Label className="text-xl font-medium mb-4 flex items-center gap-2"><Zap className="w-6 h-6 text-primary"/>Preferred energy labels?</Label>
                     <Controller
@@ -328,11 +316,12 @@ export default function FundaFinder() {
                         name="construction_period"
                         control={control}
                         render={({ field }) => (
-                             <Select onValueChange={(value) => field.onChange(value ? [value] : [])} defaultValue={field.value?.[0]}>
+                             <Select onValueChange={(value) => field.onChange(value ? [value] : [])} value={field.value?.[0] || ''}>
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Any period" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="">Any period</SelectItem>
                                     {Object.entries(CONSTRUCTION_PERIODS).map(([key, value]) => (
                                         <SelectItem key={key} value={key}>{value}</SelectItem>
                                     ))}
@@ -345,18 +334,9 @@ export default function FundaFinder() {
         );
       case 5:
         return (
-            <motion.div key={step} {...motionProps}>
+            <motion.div key="step-5" {...motionProps}>
                 <h2 className="text-3xl font-headline mb-8 text-center">Ready to find your home?</h2>
-                <div className="flex justify-center">
-                    <Button type="submit" size="lg" disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : "Find Properties" }
-                    </Button>
-                </div>
+                <p className="text-muted-foreground text-center mb-8">Click the button below to see properties that match your criteria.</p>
             </motion.div>
         );
       default:
@@ -366,7 +346,7 @@ export default function FundaFinder() {
 
   if (isLoading && step === TOTAL_STEPS) {
     return (
-        <div className="flex flex-col items-center justify-center text-center p-8 min-h-[550px]">
+        <div className="flex flex-col items-center justify-center text-center p-8 min-h-[550px] w-full max-w-2xl">
             <LoaderCircle className="w-16 h-16 animate-spin text-primary mb-6" />
             <h1 className="text-3xl font-headline mb-2">Finding Properties...</h1>
             <p className="text-muted-foreground">Our AI is analyzing your preferences.</p>
@@ -382,7 +362,7 @@ export default function FundaFinder() {
     <Card className="w-full max-w-2xl shadow-2xl">
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardHeader>
-          {step > 0 && (
+          {step > 0 && step < TOTAL_STEPS && (
             <>
               <Progress value={(step / (TOTAL_STEPS - 1)) * 100} className="w-full mb-4" />
               <CardTitle className="font-headline text-2xl">Funda Finder</CardTitle>
@@ -401,11 +381,19 @@ export default function FundaFinder() {
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           ) : <div></div>}
-          {step > 0 && step < TOTAL_STEPS - 1 ? (
-            <Button type="button" onClick={nextStep}>
+          
+          {step === 0 && (
+             <Button type="button" size="lg" onClick={nextStep}>
+              Start Searching <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          )}
+
+          {step > 0 && step < TOTAL_STEPS - 1 && (
+            <Button type="button" onClick={() => nextStep()}>
               Next <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          ) : null}
+          )}
+
           {step === TOTAL_STEPS - 1 && (
             <Button type="submit" variant="accent" disabled={isLoading}>
               {isLoading ? (

@@ -17,7 +17,6 @@ const sampleStreets = [
 const energyLabels = ["A", "B", "C", "D", "E", "F", "G"];
 
 function getRandomElement<T>(arr: T[]): T {
-  // The Math.random() function returns a floating-point, pseudo-random number in the range 0 to less than 1
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -27,11 +26,19 @@ function getRandomNumber(min: number, max: number): number {
 
 export function generateDummyProperties(count: number, query?: StructuredPropertyQuery): Property[] {
   const properties: Property[] = [];
-  const baseProperties: Property[] = Array.from({ length: 50 }, (_, i) => {
+  const usedImageIndices = new Set<number>();
+
+  while (properties.length < 50) {
+    let imageIndex = getRandomNumber(0, PlaceHolderImages.length - 1);
+    while (usedImageIndices.has(imageIndex)) {
+      imageIndex = getRandomNumber(0, PlaceHolderImages.length - 1);
+    }
+    usedImageIndices.add(imageIndex);
+
     const city = getRandomElement(sampleCities);
-    const image = PlaceHolderImages[i % PlaceHolderImages.length];
-    return {
-      id: `prop-${i + 1}-${Date.now()}`,
+    const image = PlaceHolderImages[imageIndex];
+    properties.push({
+      id: `prop-${properties.length + 1}-${Date.now()}`,
       title: `${getRandomElement(sampleTitles)} in ${city}`,
       address: `${getRandomElement(sampleStreets)} ${getRandomNumber(1, 200)}, ${city}`,
       price: getRandomNumber(150000, 1800000),
@@ -40,28 +47,32 @@ export function generateDummyProperties(count: number, query?: StructuredPropert
       imageUrl: image.imageUrl,
       imageHint: image.imageHint,
       energyLabel: getRandomElement(energyLabels),
-    };
-  });
-
-  if (!query) {
-    return baseProperties.slice(0, count);
+    });
   }
 
-  const [minPrice, maxPrice] = query.price.split('-').map(Number);
-  const minArea = parseInt(query.floor_area);
-  const minBedrooms = parseInt(query.bedrooms);
 
-  const filteredProperties = baseProperties.filter(p => {
-    const priceMatch = p.price >= minPrice && (maxPrice ? p.price <= maxPrice : true);
+  if (!query) {
+    return properties.slice(0, count);
+  }
+
+  const [minPrice, maxPrice] = query.price.split('-').map(p => p ? parseInt(p) : null);
+  const minArea = parseInt(query.floor_area) || 0;
+  const minBedrooms = parseInt(query.bedrooms) || 0;
+
+  const filteredProperties = properties.filter(p => {
+    const priceMatch = p.price >= (minPrice ?? 0) && (maxPrice ? p.price <= maxPrice : true);
     const areaMatch = p.area >= minArea;
     const bedroomMatch = p.bedrooms >= minBedrooms;
     const energyMatch = query.energy_label.length === 0 || query.energy_label.includes(p.energyLabel);
-    
-    // For simplicity, we assume location and construction period match if specified.
+    const locationMatch = query.selected_area.length === 0 || query.selected_area.some(area => p.address.toLowerCase().includes(area.toLowerCase()));
+
+    // For simplicity, we assume construction period match if specified.
     // A real implementation would need more complex logic here.
 
-    return priceMatch && areaMatch && bedroomMatch && energyMatch;
+    return priceMatch && areaMatch && bedroomMatch && energyMatch && locationMatch;
   });
 
   return filteredProperties.slice(0, count);
 }
+
+    

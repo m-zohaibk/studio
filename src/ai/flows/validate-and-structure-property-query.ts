@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Validates and structures user property preferences for Funda search.
@@ -70,8 +71,9 @@ const validateAndStructurePropertyQueryPrompt = ai.definePrompt({
   Output the validated and structured query parameters in the format specified by the ValidateAndStructurePropertyQueryOutputSchema.
   Make sure selected_area, availability, energy_label and construction_period parameters are arrays of strings.
   If a list parameter is already an array, leave it as is.
-  If construction_period is an empty string, output an empty array for construction_period.
-  Do not make assumptions about the values contained in the input, simply pass it to the output.
+  If construction_period is an empty string or an empty array, output an empty array for construction_period.
+  If a string input for a list parameter (like selected_area) contains multiple items, split them into an array. For example, "amsterdam, utrecht" should become ["amsterdam", "utrecht"].
+  Do not make assumptions about the values contained in the input, simply pass it to the output, formatting it correctly.
   `,
 });
 
@@ -86,3 +88,5 @@ const validateAndStructurePropertyQueryFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

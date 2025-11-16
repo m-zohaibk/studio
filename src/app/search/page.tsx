@@ -1,4 +1,4 @@
-import HomeFindingAgent from '@/components/funda/HomeFindingAgent';
+import HomeFindingAgent from '@/components/search/HomeFindingAgent';
 
 export default function SearchPage() {
   return (

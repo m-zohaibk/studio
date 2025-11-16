@@ -8,7 +8,7 @@ export default function Home() {
   const faqs = [
     {
       question: "How does LazyNest find properties?",
-      answer: "Our AI-powered system continuously scans Funda.nl, the largest real estate platform in the Netherlands, for new listings that match your specific criteria. It works 24/7 so you never miss an opportunity."
+      answer: "Our AI-powered system continuously scans the largest real estate platform in the Netherlands for new listings that match your specific criteria. It works 24/7 so you never miss an opportunity."
     },
     {
       question: "What does 'intelligent filtering' mean?",
@@ -43,7 +43,7 @@ export default function Home() {
               <span className="text-primary">Dream Nest</span>
             </h1>
             <p className="text-lg text-muted-foreground mb-8 max-w-lg">
-              Let our smart AI bird do the searching while you relax. LazyNests finds the perfect home on Funda, qualifies listings, and helps you book viewings—before anyone else.
+              Let our smart AI bird do the searching while you relax. LazyNests finds the perfect home, qualifies listings, and helps you book viewings—before anyone else.
             </p>
             <div className="flex items-center gap-4">
               <Button size="lg" asChild>
@@ -110,7 +110,7 @@ export default function Home() {
                     <Search className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">Smart Crawling</h3>
-                <p className="text-muted-foreground">Our AI continuously monitors Funda for new listings that match your criteria, 24/7.</p>
+                <p className="text-muted-foreground">Our AI continuously monitors for new listings that match your criteria, 24/7.</p>
             </div>
              <div className="bg-white p-6 rounded-2xl shadow-lg border border-border/50 text-center">
                 <div className="mx-auto w-16 h-16 mb-4 flex items-center justify-center bg-primary/10 rounded-full text-primary">

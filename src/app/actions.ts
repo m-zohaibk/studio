@@ -65,7 +65,7 @@ export async function runOpusWorkflow(searchParams: any) {
       },
       body: JSON.stringify({
         workflowId: OPUS_WORKFLOW_ID,
-        title: `Funda Property Search - ${searchParams.selected_area[0] || 'Unknown Area'}`,
+        title: `Property Search - ${searchParams.selected_area[0] || 'Unknown Area'}`,
         description: `Searching for properties with the following criteria: ${JSON.stringify(searchParams)}`
       })
     });
@@ -195,7 +195,7 @@ export async function fetchFundaResults(url: string) {
 
     return properties;
   } catch (error) {
-    console.error('Error scraping Funda:', error);
-    throw new Error('Could not fetch results from Funda.');
+    console.error('Error scraping results:', error);
+    throw new Error('Could not fetch results from the property service.');
   }
 }

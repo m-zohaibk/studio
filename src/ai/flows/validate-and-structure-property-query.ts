@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Validates and structures user property preferences for Funda search.
+ * @fileOverview Validates and structures user property preferences for a property search.
  *
  * - ValidateAndStructurePropertyQueryInput - Input type for the function.
  * - ValidateAndStructurePropertyQueryOutput - Output type for the function.

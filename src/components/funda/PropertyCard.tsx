@@ -56,7 +56,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         )}
       </CardHeader>
       <CardContent className="flex-grow p-4 pt-0">
-        <div className="flex items-center gap-2 font-bold text-blue-600 text-xl mb-4">
+        <div className="flex items-center gap-2 font-bold text-primary text-xl mb-4">
           <CircleDollarSign className="w-5 h-5" />
           <span>{property.price}</span>
         </div>
@@ -73,7 +73,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             href={property.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all inline-flex items-center justify-center gap-2"
+            className="w-full text-center bg-primary text-primary-foreground px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-all inline-flex items-center justify-center gap-2"
         >
             View Details
             <ExternalLink className="w-4 h-4" />

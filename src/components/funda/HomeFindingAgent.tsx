@@ -266,7 +266,7 @@ const HomeFindingAgent = () => {
 
   if (view === 'results') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full">
+      <div className="min-h-screen bg-background p-6 w-full">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             <div className="flex items-center justify-between mb-6">
@@ -299,7 +299,7 @@ const HomeFindingAgent = () => {
             </div>
             {loading ? (
                  <div className="flex flex-col items-center justify-center p-12">
-                    <Loader className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+                    <Loader className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-gray-800 mb-2">Searching for properties...</h2>
                     <p className="text-gray-600">Please wait while we find your perfect home</p>
                 </div>
@@ -325,7 +325,7 @@ const HomeFindingAgent = () => {
                 href={buildFundaUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all"
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all"
               >
                 View Results on Funda.nl
                 <ExternalLink className="w-4 h-4" />
@@ -347,20 +347,20 @@ const HomeFindingAgent = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full flex justify-center items-center">
+    <div className="min-h-screen bg-background p-6 w-full flex justify-center items-center">
       <div className="max-w-2xl mx-auto w-full">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-600">
+            <span className="text-sm font-medium text-muted-foreground">
               {progressText}
             </span>
-            <span className="text-sm font-medium text-gray-600">
+            <span className="text-sm font-medium text-muted-foreground">
               {Math.round(progress)}%
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -370,10 +370,10 @@ const HomeFindingAgent = () => {
           <>
             <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
               <div className="flex items-center gap-4 mb-6">
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl">
-                  <currentQuestion.icon className="w-8 h-8 text-white" />
+                <div className="bg-primary p-3 rounded-xl">
+                  <currentQuestion.icon className="w-8 h-8 text-primary-foreground" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800">
+                <h2 className="text-2xl font-bold text-foreground">
                   {currentQuestion.question}
                 </h2>
               </div>
@@ -385,13 +385,13 @@ const HomeFindingAgent = () => {
                     value={(currentQuestion.id === 'selected_area' ? searchParams.selected_area?.join(', ') : searchParams[currentQuestion.id]) || ''}
                     onChange={(e) => handleSelection(e.target.value)}
                     placeholder={currentQuestion.placeholder}
-                    className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
+                    className="w-full p-4 rounded-xl border-2 border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium transition-all"
                   />
                 ) : currentQuestion.type === 'slider' ? (
                     <div className="py-4">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="font-semibold text-lg text-gray-700">€{priceRange[0].toLocaleString()}</span>
-                            <span className="font-semibold text-lg text-gray-700">€{priceRange[1].toLocaleString()}</span>
+                            <span className="font-semibold text-lg text-foreground">€{priceRange[0].toLocaleString()}</span>
+                            <span className="font-semibold text-lg text-foreground">€{priceRange[1].toLocaleString()}</span>
                         </div>
                         <Slider
                             value={priceRange}
@@ -412,8 +412,8 @@ const HomeFindingAgent = () => {
                           onClick={() => handleSelection(option.value)}
                           className={`p-2 rounded-lg border-2 text-center text-xs font-semibold transition-all ${
                             isSelected
-                              ? 'border-blue-600 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-input hover:border-primary/50 hover:bg-accent text-foreground'
                           }`}
                         >
                           {option.label}
@@ -433,13 +433,13 @@ const HomeFindingAgent = () => {
                         onClick={() => handleSelection(option.value)}
                         className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
                           isSelected
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-input hover:border-primary/50 hover:bg-accent text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span>{option.label}</span>
-                          {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
+                          {isSelected && <CheckCircle className="w-5 h-5 text-primary" />}
                         </div>
                       </button>
                     );
@@ -462,7 +462,7 @@ const HomeFindingAgent = () => {
                 disabled={!isCurrentStepValid()}
                 className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
                   isCurrentStepValid()
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
@@ -476,10 +476,10 @@ const HomeFindingAgent = () => {
            <>
             <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
                 <div className="flex items-center gap-4 mb-6">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl">
-                        <User className="w-8 h-8 text-white" />
+                    <div className="bg-primary p-3 rounded-xl">
+                        <User className="w-8 h-8 text-primary-foreground" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800">
+                    <h2 className="text-2xl font-bold text-foreground">
                         Your Contact Information
                     </h2>
                 </div>
@@ -516,7 +516,7 @@ const HomeFindingAgent = () => {
                         <Label>Do you want to sell your current house?</Label>
                          <div className="flex gap-2">
                             {[ { label: 'Yes', value: true }, { label: 'No', value: false }].map(opt => (
-                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('wantToSellHouse', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.wantToSellHouse === opt.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>{opt.label}</button>
+                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('wantToSellHouse', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.wantToSellHouse === opt.value ? 'border-primary bg-primary/10' : 'border-input'}`}>{opt.label}</button>
                             ))}
                          </div>
                     </div>
@@ -524,7 +524,7 @@ const HomeFindingAgent = () => {
                         <Label>Have you had a financial consultation?</Label>
                          <div className="flex gap-2">
                              {[ { label: 'Yes', value: true }, { label: 'No', value: false }].map(opt => (
-                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('hadFinancialConsultation', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.hadFinancialConsultation === opt.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>{opt.label}</button>
+                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('hadFinancialConsultation', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.hadFinancialConsultation === opt.value ? 'border-primary bg-primary/10' : 'border-input'}`}>{opt.label}</button>
                             ))}
                          </div>
                     </div>
@@ -542,7 +542,7 @@ const HomeFindingAgent = () => {
                     disabled={!isBookingFormValid()}
                     className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
                     isBookingFormValid()
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                 >
@@ -557,5 +557,3 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
-
-    

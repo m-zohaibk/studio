@@ -144,17 +144,16 @@ const HomeFindingAgent = () => {
     setError(null);
     setShowResults(true);
 
-    const fundaUrl = buildFundaUrl();
-
     try {
       console.log("Attempting to fetch results via Opus workflow...");
-      const opusResults = await runOpusWorkflow(searchParams, fundaUrl);
+      const opusResults = await runOpusWorkflow(searchParams);
       setProperties(opusResults);
       console.log("Successfully fetched results from Opus.");
     } catch (opusErr: any) {
       console.warn("Opus workflow failed. Falling back to direct scraping.", opusErr.message);
       setError("Primary search failed. Trying backup method...");
       
+      const fundaUrl = buildFundaUrl();
       try {
         console.log("Attempting direct scraping...");
         const directResults = await fetchFundaResults(fundaUrl);
@@ -191,8 +190,7 @@ const HomeFindingAgent = () => {
   
     // Handle locations
     if (searchParams.selected_area && searchParams.selected_area.length > 0) {
-      const locations = searchParams.selected_area.map(loc => `/${loc}/`).join('');
-      queryParts.push(`selected_area=["${searchParams.selected_area.join('","')}"]`);
+      queryParts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
     }
 
     // Handle price

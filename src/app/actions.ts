@@ -47,7 +47,7 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
 };
 
 
-export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
+export async function runOpusWorkflow(searchParams: any) {
   try {
     // Step 1: Initiate Job
     const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {
@@ -95,18 +95,24 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
 
-    // Handle various possible output structures from Opus
-    // The user confirmed the output is a single object with a "properties" key.
-    const propertiesData = opusResults.result || opusResults;
-    let properties = propertiesData.properties || null;
+    let properties = null;
 
-    if (!properties && typeof propertiesData === 'string') {
+    // Handle case where result is a JSON string
+    if (opusResults.result && typeof opusResults.result === 'string') {
         try {
-            const parsedString = JSON.parse(propertiesData);
-            properties = parsedString.properties || null;
+            const parsedResult = JSON.parse(opusResults.result);
+            properties = parsedResult.properties || null;
         } catch (e) {
             console.error("Could not parse result string from Opus", e);
         }
+    } 
+    // Handle case where result is an object
+    else if (opusResults.result && opusResults.result.properties) {
+        properties = opusResults.result.properties;
+    }
+    // Fallback for other possible structures
+    else if (opusResults.properties) {
+        properties = opusResults.properties;
     }
 
 

@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 35 25% 97%;
+    --foreground: 25 35% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 25 35% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 35% 15%;
+
+    --primary: 20 75% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 35 40% 88%;
+    --secondary-foreground: 25 35% 15%;
+
+    --muted: 35 30% 92%;
+    --muted-foreground: 25 15% 45%;
+
+    --accent: 200 70% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 35 25% 88%;
+    --input: 35 25% 88%;
+    --ring: 20 75% 55%;
+
+    --radius: 0.75rem;
+    
+    --nest-warm: 25 80% 65%;
+    --nest-brown: 30 40% 45%;
+    --sky-blue: 200 70% 50%;
+    
+    --gradient-hero: linear-gradient(135deg, hsl(20 75% 55% / 0.95), hsl(25 80% 65% / 0.9));
+    --shadow-soft: 0 4px 20px hsl(20 50% 50% / 0.15);
+    --shadow-lifted: 0 10px 40px hsl(20 50% 50% / 0.2);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 25 20% 12%;
+    --foreground: 35 25% 95%;
+
+    --card: 25 25% 15%;
+    --card-foreground: 35 25% 95%;
+
+    --popover: 25 25% 15%;
+    --popover-foreground: 35 25% 95%;
+
+    --primary: 20 75% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 25 25% 22%;
+    --secondary-foreground: 35 25% 95%;
+
+    --muted: 25 25% 22%;
+    --muted-foreground: 35 15% 65%;
+
+    --accent: 200 70% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 25 25% 22%;
+    --input: 25 25% 22%;
+    --ring: 20 75% 55%;
+    
+    --nest-warm: 25 80% 65%;
+    --nest-brown: 30 40% 55%;
+    --sky-blue: 200 70% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

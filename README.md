@@ -1,51 +1,73 @@
-# Funda Finder
+# Welcome to your Lovable project
 
-This is a Next.js application designed to help users find real estate properties on Funda.nl. It features a multi-step, conversational questionnaire to gather user preferences, fetches live data from the Funda website, and displays the results directly within the app.
+## Project info
 
-## Core Technologies
+**URL**: https://lovable.dev/projects/82830d37-808b-4760-a8df-da93c5c75b9c
 
-- **Next.js:** Used for the React framework, including Server Components and Server Actions.
-- **Tailwind CSS & shadcn/ui:** For styling and UI components.
-- **Genkit (AI):** For validating and structuring user input into a searchable query.
-- **Cheerio:** For server-side web scraping of the Funda search results.
-- **TypeScript:** For type safety.
+## How can I edit this code?
 
-## Project Structure and Key Functions
+There are several ways of editing your application.
 
-### `src/app/page.tsx`
+**Use Lovable**
 
-The main entry point of the application. It simply renders the primary `HomeFindingAgent` component.
+Simply visit the [Lovable Project](https://lovable.dev/projects/82830d37-808b-4760-a8df-da93c5c75b9c) and start prompting.
 
-### `src/components/funda/HomeFindingAgent.tsx`
+Changes made via Lovable will be committed automatically to this repo.
 
-This is the core component of the user interface. It is responsible for:
-- **Multi-Step Questionnaire:** Manages a series of questions to gather user preferences for location, price, size, etc.
-- **State Management:** Uses React's `useState` hook to keep track of the user's answers, the current step in the questionnaire, loading state, and final search results.
-- **URL Construction:** Contains the `buildFundaUrl` function, which dynamically constructs the precise URL needed to perform a search on Funda based on the user's selections.
-- **Data Fetching Trigger:** Calls the `fetchFundaResults` server action to initiate the scraping process.
-- **Displaying Results:** Renders the `PropertyCard` components for each found property or shows a "No properties found" message.
+**Use your preferred IDE**
 
-### `src/components/funda/PropertyCard.tsx`
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-A presentational component that displays a single property listing. It takes a `property` object as a prop and renders its details—such as image, title, address, and price—in a styled card.
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### `src/app/actions.ts`
+Follow these steps:
 
-This file contains Next.js Server Actions that run exclusively on the server.
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-- **`fetchFundaResults(url: string)`:**
-  - This asynchronous function is the heart of the data-gathering process.
-  - It takes the generated Funda search URL as input.
-  - It uses `fetch` to get the HTML content of the search results page, spoofing a user agent to prevent being blocked.
-  - It then uses the `cheerio` library to parse the HTML and scrape the data for each property listing, targeting specific `data-test-id` attributes to ensure stability.
-  - It returns an array of property objects that can be displayed by the frontend.
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-### `src/ai/flows/validate-and-structure-property-query.ts`
+# Step 3: Install the necessary dependencies.
+npm i
 
-This file defines a Genkit AI flow used for processing user input.
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
 
-- **`validateAndStructurePropertyQuery(...)`:**
-  - This flow takes the raw user input from the form.
-  - It uses a GenAI model to validate, clean, and structure the data into a format that is compatible with Funda's search parameters.
-  - For example, it ensures that a comma-separated string of locations like `"amsterdam, utrecht"` is correctly converted into an array `["amsterdam", "utrecht"]`.
-  - While not currently used in the final URL building step, it demonstrates how AI can be used to normalize complex user input.
+**Edit a file directly in GitHub**
+
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
+
+**Use GitHub Codespaces**
+
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
+This project is built with:
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/82830d37-808b-4760-a8df-da93c5c75b9c) and click on Share -> Publish.
+
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

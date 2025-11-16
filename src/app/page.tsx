@@ -77,13 +77,13 @@ export default function Home() {
             <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl -z-10"></div>
             <div className="bg-white/60 backdrop-blur-sm p-6 rounded-3xl shadow-2xl ring-1 ring-black/5">
                 <Image
-                    src="https://picsum.photos/seed/lazynest/500/500"
+                    src="https://images.unsplash.com/photo-1552728634-c6d4ac754a26?q=80&w=500&h=500&fit=crop"
                     alt="Lazy Nests Bird Mascot"
                     width={500}
                     height={500}
                     priority
                     className="rounded-2xl"
-                    data-ai-hint="cute bird mascot"
+                    data-ai-hint="bird nest"
                 />
             </div>
              <div className="absolute top-8 -right-8 inline-flex items-center gap-2 px-4 py-2 text-white bg-primary rounded-full shadow-lg">

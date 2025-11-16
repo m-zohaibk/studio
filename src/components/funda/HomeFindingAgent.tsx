@@ -119,22 +119,22 @@ const HomeFindingAgent = () => {
 
   const currentQuestion = questions[step];
 
-  const handleSelection = (value: string | number[]) => {
+  const handleSelection = (value: string | string[] | number[]) => {
     const questionId = currentQuestion.id;
-    
+  
     if (currentQuestion.type === 'text_input' && typeof value === 'string') {
-        const locations = value.split(',').map(loc => loc.trim().toLowerCase()).filter(Boolean);
-        setSearchParams({ ...searchParams, [questionId]: locations });
-    } else if (currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') {
+      const locations = value.split(',').map(loc => loc.trim().toLowerCase()).filter(Boolean);
+      setSearchParams({ ...searchParams, [questionId]: locations });
+    } else if ((currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') && typeof value === 'string') {
       const currentValues = searchParams[questionId] || [];
       const newValues = currentValues.includes(value)
         ? currentValues.filter((v: string) => v !== value)
         : [...currentValues, value];
       setSearchParams({ ...searchParams, [questionId]: newValues });
-    } else if (currentQuestion.type === 'slider' && Array.isArray(value)) {
-        setPriceRange(value);
-        const priceString = `${value[0]}-${value[1]}`;
-        setSearchParams({ ...searchParams, [questionId]: priceString });
+    } else if (currentQuestion.type === 'slider' && Array.isArray(value) && typeof value[0] === 'number') {
+      setPriceRange(value as number[]);
+      const priceString = `${value[0]}-${value[1]}`;
+      setSearchParams({ ...searchParams, [questionId]: priceString });
     } else {
       setSearchParams({ ...searchParams, [questionId]: value });
     }
@@ -145,9 +145,19 @@ const HomeFindingAgent = () => {
     setError(null);
     setShowResults(true);
 
+    // Create a deep copy to modify for the API call
+    const apiSearchParams = JSON.parse(JSON.stringify(searchParams));
+
+    // Ensure empty arrays are still sent if no selection was made
+    questions.forEach(q => {
+        if ((q.type === 'multiselect' || q.type === 'multiselect_checkbox') && !apiSearchParams[q.id]) {
+            apiSearchParams[q.id] = [];
+        }
+    });
+
     try {
-      console.log("Attempting to fetch results via Opus workflow...");
-      const opusResults = await runOpusWorkflow(searchParams);
+      console.log("Attempting to fetch results via Opus workflow with params:", apiSearchParams);
+      const opusResults = await runOpusWorkflow(apiSearchParams);
       setProperties(opusResults);
       console.log("Successfully fetched results from Opus.");
     } catch (opusErr: any) {
@@ -230,6 +240,9 @@ const HomeFindingAgent = () => {
   const isCurrentStepValid = () => {
     const questionId = currentQuestion.id;
     const value = searchParams[questionId];
+
+    if (questionId === 'price') return true; // Slider always has a value
+
     if (Array.isArray(value)) {
       return value.length > 0;
     }
@@ -353,7 +366,7 @@ const HomeFindingAgent = () => {
                         <span className="font-semibold text-lg text-gray-700">€{priceRange[1].toLocaleString()}</span>
                     </div>
                     <Slider
-                        defaultValue={priceRange}
+                        value={priceRange}
                         min={currentQuestion.min}
                         max={currentQuestion.max}
                         step={currentQuestion.step}

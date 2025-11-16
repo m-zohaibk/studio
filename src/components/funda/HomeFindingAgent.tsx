@@ -148,14 +148,7 @@ const HomeFindingAgent = () => {
 
     try {
       console.log("Attempting to fetch results via Opus workflow...");
-      
-      const opusPayload = {
-          ...searchParams,
-          city_list: searchParams.selected_area, // Rename selected_area to city_list
-      };
-      delete opusPayload.selected_area; // remove the old key
-
-      const opusResults = await runOpusWorkflow(opusPayload, fundaUrl);
+      const opusResults = await runOpusWorkflow(searchParams, fundaUrl);
       setProperties(opusResults);
       console.log("Successfully fetched results from Opus.");
     } catch (opusErr: any) {
@@ -426,5 +419,3 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
-
-    

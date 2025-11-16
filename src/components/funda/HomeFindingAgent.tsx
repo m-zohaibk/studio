@@ -211,7 +211,7 @@ const HomeFindingAgent = () => {
 
     // Handle bedrooms
     if (searchParams.bedrooms) {
-        queryParts.push(`bedrooms="${search_params.bedrooms}"`);
+        queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
     }
     
     // Handle energy label

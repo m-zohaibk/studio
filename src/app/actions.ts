@@ -96,36 +96,35 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
     const opusResults = await pollJobResults(jobExecutionId);
 
     // Handle various possible output structures from Opus
-    const propertiesData = opusResults.results || opusResults;
-    
-    // Updated to look for 'Display Property Listings' key based on the screenshot.
-    let properties = propertiesData['Display Property Listings'] || null;
+    // The user confirmed the output is a single object with a "properties" key.
+    const propertiesData = opusResults.result || opusResults;
+    let properties = propertiesData.properties || null;
 
-    if (!properties) {
-        // Fallback checks for other possible keys
-        if (propertiesData.properties) {
-            properties = propertiesData.properties;
-        } else if (propertiesData.display_property_listings) {
-            properties = propertiesData.display_property_listings;
-        } else if (propertiesData.output && propertiesData.output.properties) {
-            properties = propertiesData.output.properties;
-        } else if (propertiesData.result && propertiesData.result.properties) {
-            properties = propertiesData.result.properties;
+    if (!properties && typeof propertiesData === 'string') {
+        try {
+            const parsedString = JSON.parse(propertiesData);
+            properties = parsedString.properties || null;
+        } catch (e) {
+            console.error("Could not parse result string from Opus", e);
         }
     }
 
 
     if (properties && Array.isArray(properties)) {
-      // The API returns objects with keys like "image_url" and "property_url".
-      // We need to normalize them to camelCase like "imageUrl" and "url" for our PropertyCard.
+      // The API returns objects with keys like "address", "size", "rooms".
+      // We need to normalize them for our PropertyCard.
       return properties.map((prop: any) => ({
-        id: prop.id || Math.random(),
-        title: prop.title,
-        address: prop.address, // Assuming address is part of title or not provided.
+        id: prop.url || Math.random(),
+        title: prop.address, // Use address as title
+        address: prop.address,
         price: prop.price,
-        imageUrl: prop.image_url,
-        features: [prop.bedrooms ? `${prop.bedrooms} bedrooms` : null, prop.area ? `${prop.area} m²` : null].filter(Boolean),
-        url: prop.property_url
+        imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+        features: [
+            prop.rooms ? `${prop.rooms} rooms` : null, 
+            prop.size ? `${prop.size}` : null,
+            prop.energy_label ? `Label: ${prop.energy_label}`: null,
+        ].filter(Boolean),
+        url: prop.url
       }));
     } else {
         console.warn("Opus results received, but a valid property array is missing.", opusResults);

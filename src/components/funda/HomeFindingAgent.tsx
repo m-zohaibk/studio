@@ -1,11 +1,13 @@
 
 'use client';
 import React, { useState } from 'react';
+import { fetchFundaResults } from '@/app/actions';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader } from 'lucide-react';
+import PropertyCard from './PropertyCard';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
-  const [searchParams, setSearchParams] = useState({
+  const [searchParams, setSearchParams] = useState<any>({
     selected_area: [],
     price: '',
     availability: [],
@@ -16,8 +18,8 @@ const HomeFindingAgent = () => {
   });
   const [showResults, setShowResults] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [properties, setProperties] = useState([]);
-  const [error, setError] = useState(null);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const questions = [
     {
@@ -81,7 +83,7 @@ const HomeFindingAgent = () => {
       id: 'energy_label',
       question: "What energy efficiency rating do you prefer?",
       icon: Zap,
-      type: 'multiselect',
+      type: 'multiselect_checkbox',
       options: [
         { value: 'A%2B%2B%2B%2B%2B', label: 'A+++++' },
         { value: 'A%2B%2B%2B%2B', label: 'A++++' },
@@ -120,15 +122,16 @@ const HomeFindingAgent = () => {
 
   const currentQuestion = questions[step];
 
-  const handleSelection = (value) => {
+  const handleSelection = (value: string) => {
     const questionId = currentQuestion.id;
     
     if (currentQuestion.type === 'text_input') {
-      setSearchParams({ ...searchParams, [questionId]: [value.toLowerCase().trim()] });
-    } else if (currentQuestion.type === 'multiselect') {
+        const locations = value.split(',').map(loc => loc.trim().toLowerCase()).filter(Boolean);
+        setSearchParams({ ...searchParams, [questionId]: locations });
+    } else if (currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') {
       const currentValues = searchParams[questionId] || [];
       const newValues = currentValues.includes(value)
-        ? currentValues.filter(v => v !== value)
+        ? currentValues.filter((v: string) => v !== value)
         : [...currentValues, value];
       setSearchParams({ ...searchParams, [questionId]: newValues });
     } else {
@@ -136,11 +139,28 @@ const HomeFindingAgent = () => {
     }
   };
 
+  const handleFindHome = async () => {
+    setLoading(true);
+    setError(null);
+    setShowResults(true);
+
+    try {
+      const fundaUrl = buildFundaUrl();
+      const results = await fetchFundaResults(fundaUrl);
+      setProperties(results);
+    } catch (err: any) {
+      setError('An error occurred while fetching properties. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleNext = () => {
     if (step < questions.length - 1) {
       setStep(step + 1);
     } else {
-      fetchProperties();
+      handleFindHome();
     }
   };
 
@@ -151,328 +171,50 @@ const HomeFindingAgent = () => {
   };
 
   const buildFundaUrl = () => {
-    const parts = [];
-    
-    if (searchParams.selected_area.length > 0) {
-      parts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
-    }
-    if (searchParams.price) {
-      parts.push(`price="${searchParams.price}"`);
-    }
-    if (searchParams.availability.length > 0) {
-      parts.push(`availability=${JSON.stringify(searchParams.availability)}`);
-    }
-    if (searchParams.floor_area) {
-      parts.push(`floor_area="${searchParams.floor_area}"`);
-    }
-    if (searchParams.bedrooms) {
-      parts.push(`bedrooms="${searchParams.bedrooms}"`);
-    }
-    if (searchParams.energy_label.length > 0) {
-      parts.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
-    }
-    if (searchParams.construction_period.length > 0) {
-      parts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
+    let url = 'https://www.funda.nl/en/zoeken/koop?';
+    const queryParts: string[] = [];
+
+    const paramsToProcess = { ...searchParams };
+
+    if (paramsToProcess.selected_area && paramsToProcess.selected_area.length > 0) {
+      queryParts.push(`selected_area=${JSON.stringify(paramsToProcess.selected_area)}`);
     }
 
-    return `https://www.funda.nl/en/zoeken/koop?${parts.join('&')}`;
-  };
-
-  // Opus Configuration
-  const OPUS_WORKFLOW_ID = 'qwqiKchRBgg0qQV9';
-  const OPUS_SERVICE_KEY = '_80a7138936bc5b76cf677386bd32ba226a68bb763fed9af54027a699fa7412e2f5b4835f457bebad6d69316c6a686a64';
-  const OPUS_BASE_URL = 'https://operator.opus.com';
-  const USE_OPUS_WORKFLOW = true; // Opus is now enabled!
-  
-  const initiateOpusJob = async (searchParams, fundaUrl) => {
-    // Step 1: Initiate Job
-    const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-key': OPUS_SERVICE_KEY
-      },
-      body: JSON.stringify({
-        workflowId: OPUS_WORKFLOW_ID,
-        title: `Funda Property Search - ${searchParams.selected_area[0]}`,
-        description: `Search for properties in ${searchParams.selected_area[0]} with filters`
-      })
-    });
-    
-    if (!initiateResponse.ok) {
-      const errorText = await initiateResponse.text();
-      throw new Error(`Failed to initiate Opus job: ${errorText}`);
-    }
-    
-    const { jobExecutionId } = await initiateResponse.json();
-    
-    // Step 2: Execute Job (you'll need to implement this based on your workflow's jobPayloadSchema)
-    // The payload structure depends on your workflow's input configuration
-    const executeResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-key': OPUS_SERVICE_KEY
-      },
-      body: JSON.stringify({
-        // Map your data to workflow inputs based on jobPayloadSchema
-        // Example (adjust based on your actual workflow inputs):
-        searchParams: searchParams,
-        fundaUrl: fundaUrl
-      })
-    });
-    
-    if (!executeResponse.ok) {
-      const errorText = await executeResponse.text();
-      throw new Error(`Failed to execute Opus job: ${errorText}`);
-    }
-    
-    // Step 3: Poll for results or wait for completion
-    return await pollJobResults(jobExecutionId);
-  };
-  
-  const pollJobResults = async (jobExecutionId, maxAttempts = 30) => {
-    for (let i = 0; i < maxAttempts; i++) {
-      const response = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/status`, {
-        headers: {
-          'x-service-key': OPUS_SERVICE_KEY
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to check job status');
-      }
-      
-      const status = await response.json();
-      
-      if (status.status === 'completed') {
-        // Get job results
-        const resultsResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
-          headers: {
-            'x-service-key': OPUS_SERVICE_KEY
-          }
-        });
-        
-        if (!resultsResponse.ok) {
-          throw new Error('Failed to get job results');
-        }
-        
-        return await resultsResponse.json();
-      } else if (status.status === 'failed') {
-        throw new Error('Job failed');
-      }
-      
-      // Wait 2 seconds before polling again
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-    
-    throw new Error('Job timed out');
-  };
-  
-  const fetchProperties = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const fundaUrl = buildFundaUrl();
-      
-      // Try Opus workflow first (if configured)
-      if (USE_OPUS_WORKFLOW && OPUS_SERVICE_KEY) {
-        try {
-          const opusResults = await initiateOpusJob(searchParams, fundaUrl);
-          
-          // Extract properties from Opus results
-          // Adjust based on your workflow's output structure
-          if (opusResults && opusResults.properties && Array.isArray(opusResults.properties)) {
-            setProperties(opusResults.properties);
-            setShowResults(true);
-            return;
-          }
-        } catch (opusErr) {
-          console.log('Opus workflow failed, trying fallback methods...', opusErr);
-        }
-      }
-      
-      // Fallback Method 1: Direct scraping with CORS proxy
-      const response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(fundaUrl))
-        .catch(() => null);
-      
-      if (response && response.ok) {
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const propertyCards = doc.querySelectorAll('[data-test-id="search-result-item"]');
-        
-        if (propertyCards.length === 0) {
-          const altCards = doc.querySelectorAll('.search-result, [class*="search-result"]');
-          if (altCards.length > 0) {
-            parseProperties(altCards, fundaUrl);
-            return;
-          }
-        } else {
-          parseProperties(propertyCards, fundaUrl);
-          return;
-        }
-      }
-      
-      // Fallback Method 2: Claude API with web tools
-      const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4000,
-          messages: [{
-            role: 'user',
-            content: `Use web search and browsing to find properties from: ${fundaUrl}
-
-Search for "funda ${searchParams.selected_area[0]} properties for sale" and extract property listings.
-
-For each property found, return JSON with:
-- title: full address
-- price: exact price (e.g., "€ 350,000 k.k.")
-- bedrooms: number or "N/A"
-- area: size in m² or "N/A"
-- image: image URL
-- url: full property URL on funda.nl
-
-Return ONLY valid JSON array: [{"title":"...","price":"...","bedrooms":"...","area":"...","image":"...","url":"..."}]`
-          }],
-          tools: [{
-            type: "web_search_20250305",
-            name: "web_search"
-          }]
-        })
-      });
-
-      const data = await apiResponse.json();
-      
-      if (data.content) {
-        let textContent = data.content
-          .filter(item => item.type === 'text')
-          .map(item => item.text)
-          .join('\n');
-        
-        textContent = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const jsonMatch = textContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
-        
-        if (jsonMatch) {
-          try {
-            const parsedProperties = JSON.parse(jsonMatch[0]);
-            if (Array.isArray(parsedProperties) && parsedProperties.length > 0) {
-              setProperties(parsedProperties);
-              setShowResults(true);
-              return;
-            }
-          } catch (parseErr) {
-            console.error('JSON parse error:', parseErr);
+    Object.keys(paramsToProcess).forEach(key => {
+      if (key !== 'selected_area') {
+        const value = paramsToProcess[key];
+        if (value && value.length > 0) {
+          if (Array.isArray(value)) {
+            queryParts.push(`${key}=${JSON.stringify(value)}`);
+          } else {
+            queryParts.push(`${key}="${value}"`);
           }
         }
-      }
-      
-      setError('Unable to fetch property data from Funda. Please use the "View All Results on Funda.nl" button to see properties directly on their website.');
-      setProperties([]);
-      setShowResults(true);
-      
-    } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError('Unable to connect to Funda. Please try again or use the "View All Results on Funda.nl" button below.');
-      setProperties([]);
-      setShowResults(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const parseProperties = (cards, baseUrl) => {
-    const extracted = [];
-    
-    cards.forEach((card, index) => {
-      if (index >= 12) return; // Limit to 12 properties
-      
-      try {
-        // Try multiple selector strategies
-        const titleEl = card.querySelector('[data-test-id="street-name-house-number"]') || 
-                        card.querySelector('h2') || 
-                        card.querySelector('[class*="address"]');
-        
-        const priceEl = card.querySelector('[data-test-id="price-sale"]') || 
-                        card.querySelector('[class*="price"]');
-        
-        const imageEl = card.querySelector('img');
-        
-        const linkEl = card.querySelector('a[href*="/koop/"]') || 
-                       card.querySelector('a');
-        
-        // Extract bedroom info
-        const bedroomEl = card.querySelector('[title*="slaapkamer"]') || 
-                          card.querySelector('[class*="bedroom"]');
-        
-        // Extract area info
-        const areaEl = card.querySelector('[title*="m²"]') || 
-                       card.querySelector('[class*="surface"]');
-        
-        if (titleEl && priceEl) {
-          const property = {
-            title: titleEl.textContent.trim(),
-            price: priceEl.textContent.trim(),
-            bedrooms: bedroomEl ? bedroomEl.textContent.trim().replace(/\D/g, '') : 'N/A',
-            area: areaEl ? areaEl.textContent.trim() : 'N/A',
-            image: imageEl ? (imageEl.src || imageEl.dataset.src) : 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
-            url: linkEl ? (linkEl.href.startsWith('http') ? linkEl.href : 'https://www.funda.nl' + linkEl.href) : baseUrl
-          };
-          
-          extracted.push(property);
-        }
-      } catch (err) {
-        console.error('Error parsing property card:', err);
       }
     });
-    
-    if (extracted.length > 0) {
-      setProperties(extracted);
-      setShowResults(true);
-    } else {
-      throw new Error('No properties extracted');
-    }
+
+    url += queryParts.join('&');
+    return url;
   };
 
   const isCurrentStepValid = () => {
     const questionId = currentQuestion.id;
     const value = searchParams[questionId];
-    
-    if (currentQuestion.type === 'text_input') {
-      return value && value.length > 0 && value[0] !== '';
+    if (Array.isArray(value)) {
+      return value.length > 0;
     }
-    if (currentQuestion.type === 'multiselect') {
-      return value && value.length > 0;
-    }
-    return value !== '';
+    return !!value;
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-          <Loader className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Searching for properties...</h2>
-          <p className="text-gray-600">Please wait while we find your perfect home</p>
-        </div>
-      </div>
-    );
-  }
 
   if (showResults) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  {properties.length > 0 ? `Found ${properties.length} Properties` : 'Search Results'}
+                  Search Results
                 </h2>
                 <p className="text-gray-600">Based on your search criteria</p>
               </div>
@@ -483,13 +225,8 @@ Return ONLY valid JSON array: [{"title":"...","price":"...","bedrooms":"...","ar
                   setProperties([]);
                   setError(null);
                   setSearchParams({
-                    selected_area: [],
-                    price: '',
-                    availability: [],
-                    floor_area: '',
-                    bedrooms: '',
-                    energy_label: [],
-                    construction_period: []
+                    selected_area: [], price: '', availability: [], floor_area: '',
+                    bedrooms: '', energy_label: [], construction_period: []
                   });
                 }}
                 className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
@@ -497,84 +234,41 @@ Return ONLY valid JSON array: [{"title":"...","price":"...","bedrooms":"...","ar
                 New Search
               </button>
             </div>
-
-            {error && (
+            {loading ? (
+                 <div className="flex flex-col items-center justify-center p-12">
+                    <Loader className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Searching for properties...</h2>
+                    <p className="text-gray-600">Please wait while we find your perfect home</p>
+                </div>
+            ) : error ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <p className="text-yellow-800">{error}</p>
               </div>
+            ) : properties.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {properties.map((prop) => <PropertyCard key={prop.id} property={prop} />)}
+                </div>
+            ) : (
+                <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                    <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">No Properties Found</h3>
+                    <p className="text-gray-600 mb-6">
+                        We couldn't find any properties matching your criteria. Try a broader search.
+                    </p>
+                </div>
             )}
-
-            <div className="mb-6">
+             <div className="mt-6">
               <a
                 href={buildFundaUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all"
               >
-                View All Results on Funda.nl
+                View Results on Funda.nl
                 <ExternalLink className="w-4 h-4" />
               </a>
             </div>
           </div>
-
-          {properties.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {properties.map((property, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
-                  <div className="relative h-48 bg-gray-200">
-                    <img
-                      src={property.image}
-                      alt={property.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400';
-                      }}
-                    />
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-bold text-lg text-gray-800 mb-2 line-clamp-2">
-                      {property.title}
-                    </h3>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-2xl font-bold text-blue-600">
-                        {property.price}
-                      </span>
-                    </div>
-                    <div className="flex gap-4 text-sm text-gray-600 mb-4">
-                      {property.bedrooms && property.bedrooms !== 'N/A' && (
-                        <div className="flex items-center gap-1">
-                          <Bed className="w-4 h-4" />
-                          <span>{property.bedrooms} bed</span>
-                        </div>
-                      )}
-                      {property.area && property.area !== 'N/A' && (
-                        <div className="flex items-center gap-1">
-                          <Maximize className="w-4 h-4" />
-                          <span>{property.area}</span>
-                        </div>
-                      )}
-                    </div>
-                    <a
-                      href={property.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 rounded-lg font-semibold text-center hover:from-blue-700 hover:to-indigo-700 transition-all"
-                    >
-                      View Details
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-              <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">No properties found</h3>
-              <p className="text-gray-600 mb-6">
-                We couldn't retrieve property listings. Please click the button above to view results directly on Funda.nl
-              </p>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -583,8 +277,8 @@ Return ONLY valid JSON array: [{"title":"...","price":"...","bedrooms":"...","ar
   const Icon = currentQuestion.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full flex justify-center items-center">
+      <div className="max-w-2xl mx-auto w-full">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-gray-600">
@@ -616,11 +310,30 @@ Return ONLY valid JSON array: [{"title":"...","price":"...","bedrooms":"...","ar
             {currentQuestion.type === 'text_input' ? (
               <input
                 type="text"
-                value={searchParams[currentQuestion.id]?.[0] || ''}
+                value={searchParams[currentQuestion.id]?.join(', ') || ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
               />
+            ) : currentQuestion.type === 'multiselect_checkbox' ? (
+              <div className="grid grid-cols-4 gap-2">
+                {currentQuestion.options.map((option) => {
+                  const isSelected = searchParams[currentQuestion.id]?.includes(option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => handleSelection(option.value)}
+                      className={`p-2 rounded-lg border-2 text-center text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               currentQuestion.options.map((option) => {
                 const isSelected = currentQuestion.type === 'multiselect'
@@ -639,9 +352,7 @@ Return ONLY valid JSON array: [{"title":"...","price":"...","bedrooms":"...","ar
                   >
                     <div className="flex items-center justify-between">
                       <span>{option.label}</span>
-                      {isSelected && (
-                        <CheckCircle className="w-5 h-5 text-blue-600" />
-                      )}
+                      {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
                     </div>
                   </button>
                 );

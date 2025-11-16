@@ -19,7 +19,7 @@ export async function fetchFundaResults(url: string) {
     const $ = cheerio.load(html);
 
     const properties: any[] = [];
-    $('.search-result-main').each((i, el) => {
+    $('[data-test-id="search-result-item"]').each((i, el) => {
       const title = $(el).find('[data-test-id="street-name-house-number"]').text().trim();
       const address = $(el).find('[data-test-id="postal-code-city"]').text().trim();
       const price = $(el).find('[data-test-id="price-wrapper"]').text().trim().replace(/\s/g, '');

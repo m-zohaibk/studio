@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { fetchFundaResults } from '@/app/actions';
+import { runOpusWorkflow, fetchFundaResults } from '@/app/actions';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 
@@ -144,13 +144,27 @@ const HomeFindingAgent = () => {
     setError(null);
     setShowResults(true);
 
+    const fundaUrl = buildFundaUrl();
+
     try {
-      const fundaUrl = buildFundaUrl();
-      const results = await fetchFundaResults(fundaUrl);
-      setProperties(results);
-    } catch (err: any) {
-      setError('An error occurred while fetching properties. Please try again.');
-      console.error(err);
+      console.log("Attempting to fetch results via Opus workflow...");
+      const opusResults = await runOpusWorkflow(searchParams, fundaUrl);
+      setProperties(opusResults);
+      console.log("Successfully fetched results from Opus.");
+    } catch (opusErr: any) {
+      console.warn("Opus workflow failed. Falling back to direct scraping.", opusErr.message);
+      setError("Primary search failed. Trying backup method...");
+      
+      try {
+        console.log("Attempting direct scraping...");
+        const directResults = await fetchFundaResults(fundaUrl);
+        setProperties(directResults);
+        setError(null); // Clear the temporary error message
+        console.log("Successfully fetched results via direct scraping.");
+      } catch (directErr: any) {
+        console.error("Direct scraping also failed.", directErr.message);
+        setError('Could not fetch results. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -173,26 +187,30 @@ const HomeFindingAgent = () => {
   const buildFundaUrl = () => {
     let url = 'https://www.funda.nl/en/zoeken/koop?';
     const queryParts: string[] = [];
-
+  
     const paramsToProcess = { ...searchParams };
-
+  
+    // Process selected_area
     if (paramsToProcess.selected_area && paramsToProcess.selected_area.length > 0) {
       queryParts.push(`selected_area=${JSON.stringify(paramsToProcess.selected_area)}`);
     }
-
+  
+    // Process other parameters
     Object.keys(paramsToProcess).forEach(key => {
       if (key !== 'selected_area') {
         const value = paramsToProcess[key];
         if (value && value.length > 0) {
           if (Array.isArray(value)) {
+            // For arrays, use JSON.stringify
             queryParts.push(`${key}=${JSON.stringify(value)}`);
           } else {
+            // For single string values, wrap in quotes
             queryParts.push(`${key}="${value}"`);
           }
         }
       }
     });
-
+  
     url += queryParts.join('&');
     return url;
   };

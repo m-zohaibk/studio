@@ -42,7 +42,7 @@ const HomeFindingAgent = () => {
     },
     {
       id: 'availability',
-      question: "When do you want to move in?",
+      question: "Availability?",
       icon: Calendar,
       type: 'multiselect',
       options: [
@@ -211,7 +211,7 @@ const HomeFindingAgent = () => {
 
     // Handle bedrooms
     if (searchParams.bedrooms) {
-        queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
+        queryParts.push(`bedrooms="${search_params.bedrooms}"`);
     }
     
     // Handle energy label

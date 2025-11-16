@@ -170,4 +170,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} LazyNest. All rights reserved.</p>
         </div>
-      
+      </footer>
+    </div>
+  );
+}

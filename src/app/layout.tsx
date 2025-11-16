@@ -1,10 +1,11 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bird, Feather } from 'lucide-react';
+import { Feather } from 'lucide-react';
 
 
 export const metadata: Metadata = {
@@ -41,3 +42,13 @@ export default function RootLayout({
             </Button>
             <Button asChild>
               <Link href="/search">Start Your Search</Link>
+            </Button>
+          </div>
+        </nav>
+      </header>
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  );
+}

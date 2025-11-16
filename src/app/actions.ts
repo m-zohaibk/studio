@@ -69,7 +69,7 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
 
     const { jobExecutionId } = await initiateResponse.json();
 
-    // Step 2: Execute Job with the correct payload structure
+    // Step 2: Execute Job with the correct payload structure for the new workflow
     const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
         method: 'POST',
         headers: {
@@ -79,37 +79,12 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
         body: JSON.stringify({
             jobExecutionId: jobExecutionId,
             jobPayloadSchemaInstance: {
-                location: {
-                    value: searchParams.selected_area[0] || 'Amsterdam',
-                    type: 'str'
-                },
-                budget: {
-                    value: searchParams.price || '0-1000000',
-                    type: 'str'
-                },
-                availability: {
-                    value: searchParams.availability || [],
-                    type: 'array'
-                },
-                energy_label: {
-                    value: searchParams.energy_label || [],
-                    type: 'array'
-                },
-                minimum_bedrooms: {
-                    value: parseInt(searchParams.bedrooms?.replace('-', '') || '1'),
-                    type: 'float'
-                },
-                minimum_floor_area: {
-                    value: parseInt(searchParams.floor_area?.replace('-', '') || '50'),
-                    type: 'float'
-                },
-                construction_period: {
-                    value: searchParams.construction_period || [],
-                    type: 'array'
-                },
-                funda_url: {
-                    value: fundaUrl,
-                    type: 'str'
+                // This workflow expects a single object with all filter criteria.
+                // NOTE: You may need to replace 'filter_criteria' with the actual
+                // input variable name from your Opus workflow's jobPayloadSchema.
+                filter_criteria: {
+                    value: searchParams,
+                    type: 'object'
                 }
             }
         })

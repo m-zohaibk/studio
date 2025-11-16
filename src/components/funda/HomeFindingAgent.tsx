@@ -5,9 +5,14 @@ import { runOpusWorkflow, fetchFundaResults } from '@/app/actions';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+type View = 'questionnaire' | 'booking' | 'results';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
+  const [view, setView] = useState<View>('questionnaire');
   const [searchParams, setSearchParams] = useState<any>({
     selected_area: [],
     price: '0-1000000',
@@ -25,16 +30,15 @@ const HomeFindingAgent = () => {
     postCode: '',
     houseNumber: '',
     addition: '',
-    wantToSellHouse: null,
-    hadFinancialConsultation: null,
+    wantToSellHouse: null as boolean | null,
+    hadFinancialConsultation: null as boolean | null,
   });
-  const [showResults, setShowResults] = useState(false);
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
 
-  const questions = [
+  const searchQuestions = [
     {
       id: 'selected_area',
       question: "Which area are you interested in?",
@@ -126,59 +130,48 @@ const HomeFindingAgent = () => {
         { value: 'from_2021', label: '2021 onwards' }
       ]
     },
-     { id: 'email', question: "What's your email address?", icon: Mail, type: 'email_input', placeholder: 'john.doe@example.com', target: 'bookingInfo' },
-    { id: 'firstName', question: "What's your first name?", icon: User, type: 'text_input', placeholder: 'John', target: 'bookingInfo' },
-    { id: 'lastName', question: "What's your last name?", icon: User, type: 'text_input', placeholder: 'Doe', target: 'bookingInfo' },
-    { id: 'phone', question: "What's your phone number?", icon: Phone, type: 'tel_input', placeholder: '1234567890', target: 'bookingInfo' },
-    { id: 'postCode', question: "What's your postcode?", icon: Mailbox, type: 'text_input', placeholder: '1234 AB', target: 'bookingInfo' },
-    { id: 'houseNumber', question: "What's your house number?", icon: Home, type: 'text_input', placeholder: '123', target: 'bookingInfo' },
-    { id: 'addition', question: "Any addition? (optional)", icon: Plus, type: 'text_input', placeholder: 'e.g., A', target: 'bookingInfo', optional: true },
-    { id: 'wantToSellHouse', question: "Do you want to sell your current house?", icon: Repeat, type: 'boolean', options: [{value: true, label: 'Yes'}, {value: false, label: 'No'}], target: 'bookingInfo'},
-    { id: 'hadFinancialConsultation', question: "Have you had a financial consultation?", icon: Briefcase, type: 'boolean', options: [{value: true, label: 'Yes'}, {value: false, label: 'No'}], target: 'bookingInfo' },
   ];
 
-  const currentQuestion = questions[step];
+  const currentQuestion = searchQuestions[step];
 
   const handleSelection = (value: any) => {
     const questionId = currentQuestion.id;
-    const targetState = currentQuestion.target === 'bookingInfo' ? bookingInfo : searchParams;
-    const setState = currentQuestion.target === 'bookingInfo' ? setBookingInfo : setSearchParams;
   
-    if (currentQuestion.type === 'text_input' || currentQuestion.type === 'email_input' || currentQuestion.type === 'tel_input') {
+    if (currentQuestion.type === 'text_input') {
       if (questionId === 'selected_area') {
          const locations = value.split(',').map((loc: string) => loc.trim().toLowerCase()).filter(Boolean);
-         setState({ ...targetState, [questionId]: locations });
+         setSearchParams({ ...searchParams, [questionId]: locations });
       } else {
-         setState({ ...targetState, [questionId]: value });
+         setSearchParams({ ...searchParams, [questionId]: value });
       }
     } else if ((currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox')) {
-      const currentValues = targetState[questionId] || [];
+      const currentValues = searchParams[questionId] || [];
       const newValues = currentValues.includes(value)
         ? currentValues.filter((v: string) => v !== value)
         : [...currentValues, value];
-      setState({ ...targetState, [questionId]: newValues });
+      setSearchParams({ ...searchParams, [questionId]: newValues });
     } else if (currentQuestion.type === 'slider' && Array.isArray(value) && typeof value[0] === 'number') {
       setPriceRange(value as number[]);
       const priceString = `${value[0]}-${value[1]}`;
-      setState({ ...targetState, [questionId]: priceString });
-    } else if(currentQuestion.type === 'boolean') {
-        setState({ ...targetState, [questionId]: value });
+      setSearchParams({ ...searchParams, [questionId]: priceString });
     } else {
-      setState({ ...targetState, [questionId]: value });
+      setSearchParams({ ...searchParams, [questionId]: value });
     }
+  };
+
+  const handleBookingInfoChange = (field: keyof typeof bookingInfo, value: string | boolean | null) => {
+    setBookingInfo(prev => ({ ...prev, [field]: value }));
   };
 
   const handleFindHome = async () => {
     setLoading(true);
     setError(null);
-    setShowResults(true);
+    setView('results');
 
-    // Create a deep copy to modify for the API call
     const apiSearchParams = JSON.parse(JSON.stringify(searchParams));
 
-    // Ensure empty arrays are still sent if no selection was made
-    questions.forEach(q => {
-        if (!q.target && (q.type === 'multiselect' || q.type === 'multiselect_checkbox') && !apiSearchParams[q.id]) {
+    searchQuestions.forEach(q => {
+        if ((q.type === 'multiselect' || q.type === 'multiselect_checkbox') && !apiSearchParams[q.id]) {
             apiSearchParams[q.id] = [];
         }
     });
@@ -197,7 +190,7 @@ const HomeFindingAgent = () => {
         console.log("Attempting direct scraping...");
         const directResults = await fetchFundaResults(fundaUrl);
         setProperties(directResults);
-        setError(null); // Clear the temporary error message
+        setError(null);
         console.log("Successfully fetched results via direct scraping.");
       } catch (directErr: any) {
         console.error("Direct scraping also failed.", directErr.message);
@@ -210,14 +203,18 @@ const HomeFindingAgent = () => {
 
 
   const handleNext = () => {
-    if (step < questions.length - 1) {
+    if (step < searchQuestions.length - 1) {
       setStep(step + 1);
     } else {
-      handleFindHome();
+      setView('booking');
     }
   };
 
   const handleBack = () => {
+    if (view === 'booking') {
+      setView('questionnaire');
+      return;
+    }
     if (step > 0) {
       setStep(step - 1);
     }
@@ -227,37 +224,24 @@ const HomeFindingAgent = () => {
     const baseUrl = `https://www.funda.nl/en/zoeken/koop?`;
     const queryParts: string[] = [];
   
-    // Handle locations
     if (searchParams.selected_area && searchParams.selected_area.length > 0) {
       queryParts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
     }
-
-    // Handle price
     if (searchParams.price) {
       queryParts.push(`price="${searchParams.price}"`);
     }
-
-    // Handle availability
     if (searchParams.availability && searchParams.availability.length > 0) {
        queryParts.push(`availability=${JSON.stringify(searchParams.availability)}`);
     }
-
-    // Handle floor area
     if (searchParams.floor_area) {
         queryParts.push(`floor_area="${searchParams.floor_area}"`);
     }
-
-    // Handle bedrooms
     if (searchParams.bedrooms) {
         queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
     }
-    
-    // Handle energy label
     if (searchParams.energy_label && searchParams.energy_label.length > 0) {
         queryParts.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
     }
-
-    // Handle construction period
     if (searchParams.construction_period && searchParams.construction_period.length > 0) {
         queryParts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
     }
@@ -267,17 +251,20 @@ const HomeFindingAgent = () => {
 
   const isCurrentStepValid = () => {
     const questionId = currentQuestion.id;
-    const value = currentQuestion.target === 'bookingInfo' ? bookingInfo[questionId as keyof typeof bookingInfo] : searchParams[questionId];
+    const value = searchParams[questionId];
 
-    if (currentQuestion.optional) return true;
-    if (questionId === 'price') return true; // Slider always has a value
-    if (typeof value === 'boolean' || value === null) return value !== null;
+    if (questionId === 'price') return true; 
     if (Array.isArray(value)) return value.length > 0;
     
     return !!value;
   };
+   
+  const isBookingFormValid = () => {
+    const { email, firstName, lastName, phone, postCode, houseNumber, wantToSellHouse, hadFinancialConsultation } = bookingInfo;
+    return email && firstName && lastName && phone && postCode && houseNumber && wantToSellHouse !== null && hadFinancialConsultation !== null;
+  };
 
-  if (showResults) {
+  if (view === 'results') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full">
         <div className="max-w-7xl mx-auto">
@@ -291,7 +278,7 @@ const HomeFindingAgent = () => {
               </div>
               <button
                 onClick={() => {
-                  setShowResults(false);
+                  setView('questionnaire');
                   setStep(0);
                   setProperties([]);
                   setError(null);
@@ -350,9 +337,13 @@ const HomeFindingAgent = () => {
     );
   }
 
-  const Icon = currentQuestion.icon;
-  const targetState = currentQuestion.target === 'bookingInfo' ? bookingInfo : searchParams;
-  const value = targetState[currentQuestion.id as keyof typeof targetState];
+  const progress = view === 'questionnaire' 
+    ? ((step + 1) / (searchQuestions.length + 1)) * 100
+    : 100;
+  
+  const progressText = view === 'questionnaire'
+    ? `Question ${step + 1} of ${searchQuestions.length}`
+    : 'Final Step: Your Information';
 
 
   return (
@@ -361,144 +352,210 @@ const HomeFindingAgent = () => {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-gray-600">
-              Question {step + 1} of {questions.length}
+              {progressText}
             </span>
             <span className="text-sm font-medium text-gray-600">
-              {Math.round(((step + 1) / questions.length) * 100)}%
+              {Math.round(progress)}%
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((step + 1) / questions.length) * 100}%` }}
+              style={{ width: `${progress}%` }}
             />
           </div>
         </div>
-
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl">
-              <Icon className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">
-              {currentQuestion.question}
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {currentQuestion.type === 'text_input' || currentQuestion.type === 'email_input' || currentQuestion.type === 'tel_input' ? (
-              <input
-                type={currentQuestion.type === 'email_input' ? 'email' : currentQuestion.type === 'tel_input' ? 'tel' : 'text'}
-                value={(currentQuestion.id === 'selected_area' ? value?.join(', ') : value) || ''}
-                onChange={(e) => handleSelection(e.target.value)}
-                placeholder={currentQuestion.placeholder}
-                className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
-              />
-            ) : currentQuestion.type === 'slider' ? (
-                <div className="py-4">
-                     <div className="flex justify-between items-center mb-4">
-                        <span className="font-semibold text-lg text-gray-700">€{priceRange[0].toLocaleString()}</span>
-                        <span className="font-semibold text-lg text-gray-700">€{priceRange[1].toLocaleString()}</span>
-                    </div>
-                    <Slider
-                        value={priceRange}
-                        min={currentQuestion.min}
-                        max={currentQuestion.max}
-                        step={currentQuestion.step}
-                        onValueChange={(value) => handleSelection(value)}
-                        className="w-full"
-                    />
+        
+        {view === 'questionnaire' && (
+          <>
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl">
+                  <currentQuestion.icon className="w-8 h-8 text-white" />
                 </div>
-            ) : currentQuestion.type === 'multiselect_checkbox' ? (
-              <div className="grid grid-cols-4 gap-2">
-                {currentQuestion.options.map((option: {value: string, label: string}) => {
-                  const isSelected = value?.includes(option.value);
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => handleSelection(option.value)}
-                      className={`p-2 rounded-lg border-2 text-center text-xs font-semibold transition-all ${
-                        isSelected
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {currentQuestion.question}
+                </h2>
               </div>
-            ) : currentQuestion.type === 'boolean' ? (
-                 currentQuestion.options.map((option: {value: boolean, label: string}) => {
-                    const isSelected = value === option.value;
-                    return (
+
+              <div className="space-y-3">
+                {currentQuestion.type === 'text_input' ? (
+                  <input
+                    type='text'
+                    value={(currentQuestion.id === 'selected_area' ? searchParams.selected_area?.join(', ') : searchParams[currentQuestion.id]) || ''}
+                    onChange={(e) => handleSelection(e.target.value)}
+                    placeholder={currentQuestion.placeholder}
+                    className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
+                  />
+                ) : currentQuestion.type === 'slider' ? (
+                    <div className="py-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="font-semibold text-lg text-gray-700">€{priceRange[0].toLocaleString()}</span>
+                            <span className="font-semibold text-lg text-gray-700">€{priceRange[1].toLocaleString()}</span>
+                        </div>
+                        <Slider
+                            value={priceRange}
+                            min={currentQuestion.min}
+                            max={currentQuestion.max}
+                            step={currentQuestion.step}
+                            onValueChange={(value) => handleSelection(value)}
+                            className="w-full"
+                        />
+                    </div>
+                ) : currentQuestion.type === 'multiselect_checkbox' ? (
+                  <div className="grid grid-cols-4 gap-2">
+                    {currentQuestion.options.map((option: {value: string, label: string}) => {
+                      const isSelected = searchParams[currentQuestion.id]?.includes(option.value);
+                      return (
                         <button
-                        key={String(option.value)}
+                          key={option.value}
+                          onClick={() => handleSelection(option.value)}
+                          className={`p-2 rounded-lg border-2 text-center text-xs font-semibold transition-all ${
+                            isSelected
+                              ? 'border-blue-600 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : ( // Covers 'select' and 'multiselect'
+                  currentQuestion.options.map((option: {value: string, label: string}) => {
+                    const isSelected = currentQuestion.type === 'multiselect'
+                      ? searchParams[currentQuestion.id]?.includes(option.value)
+                      : searchParams[currentQuestion.id] === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
                         onClick={() => handleSelection(option.value)}
                         className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
-                            isSelected
+                          isSelected
                             ? 'border-blue-600 bg-blue-50 text-blue-700'
                             : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
                         }`}
-                        >
+                      >
                         <div className="flex items-center justify-between">
-                            <span>{option.label}</span>
-                            {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
+                          <span>{option.label}</span>
+                          {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
                         </div>
-                        </button>
+                      </button>
                     );
-                 })
-            ) : (
-              currentQuestion.options.map((option: {value: string, label: string}) => {
-                const isSelected = currentQuestion.type === 'multiselect'
-                  ? value?.includes(option.value)
-                  : value === option.value;
+                  })
+                )}
+              </div>
+            </div>
 
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleSelection(option.value)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{option.label}</span>
-                      {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
+            <div className="flex gap-4">
+              {step > 0 && (
+                <button
+                  onClick={handleBack}
+                  className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                onClick={handleNext}
+                disabled={!isCurrentStepValid()}
+                className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
+                  isCurrentStepValid()
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
+        
+        {view === 'booking' && (
+           <>
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl">
+                        <User className="w-8 h-8 text-white" />
                     </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          {step > 0 && (
-            <button
-              onClick={handleBack}
-              className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-            >
-              Back
-            </button>
-          )}
-          <button
-            onClick={handleNext}
-            disabled={!isCurrentStepValid()}
-            className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
-              isCurrentStepValid()
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {step === questions.length - 1 ? 'Find My Home' : 'Next'}
-          </button>
-        </div>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                        Your Contact Information
+                    </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input id="firstName" value={bookingInfo.firstName} onChange={(e) => handleBookingInfoChange('firstName', e.target.value)} placeholder="John" />
+                    </div>
+                    <div>
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input id="lastName" value={bookingInfo.lastName} onChange={(e) => handleBookingInfoChange('lastName', e.target.value)} placeholder="Doe" />
+                    </div>
+                    <div className="md:col-span-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" value={bookingInfo.email} onChange={(e) => handleBookingInfoChange('email', e.target.value)} placeholder="john.doe@example.com" />
+                    </div>
+                    <div className="md:col-span-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input id="phone" type="tel" value={bookingInfo.phone} onChange={(e) => handleBookingInfoChange('phone', e.target.value)} placeholder="1234567890" />
+                    </div>
+                    <div>
+                        <Label htmlFor="postCode">Postcode</Label>
+                        <Input id="postCode" value={bookingInfo.postCode} onChange={(e) => handleBookingInfoChange('postCode', e.target.value)} placeholder="1234 AB" />
+                    </div>
+                     <div>
+                        <Label htmlFor="houseNumber">House Number</Label>
+                        <Input id="houseNumber" value={bookingInfo.houseNumber} onChange={(e) => handleBookingInfoChange('houseNumber', e.target.value)} placeholder="123" />
+                    </div>
+                    <div className="md:col-span-2">
+                         <Label htmlFor="addition">Addition (optional)</Label>
+                        <Input id="addition" value={bookingInfo.addition} onChange={(e) => handleBookingInfoChange('addition', e.target.value)} placeholder="A" />
+                    </div>
+                     <div className="md:col-span-2 space-y-2">
+                        <Label>Do you want to sell your current house?</Label>
+                         <div className="flex gap-2">
+                            {[ { label: 'Yes', value: true }, { label: 'No', value: false }].map(opt => (
+                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('wantToSellHouse', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.wantToSellHouse === opt.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>{opt.label}</button>
+                            ))}
+                         </div>
+                    </div>
+                     <div className="md:col-span-2 space-y-2">
+                        <Label>Have you had a financial consultation?</Label>
+                         <div className="flex gap-2">
+                             {[ { label: 'Yes', value: true }, { label: 'No', value: false }].map(opt => (
+                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('hadFinancialConsultation', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.hadFinancialConsultation === opt.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>{opt.label}</button>
+                            ))}
+                         </div>
+                    </div>
+                </div>
+            </div>
+             <div className="flex gap-4">
+                <button
+                    onClick={handleBack}
+                    className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                    >
+                    Back
+                </button>
+                <button
+                    onClick={handleFindHome}
+                    disabled={!isBookingFormValid()}
+                    className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
+                    isBookingFormValid()
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                >
+                    Find My Home
+                </button>
+            </div>
+           </>
+        )}
       </div>
     </div>
   );
 };
 
 export default HomeFindingAgent;
+
+    

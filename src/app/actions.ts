@@ -58,7 +58,7 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
       },
       body: JSON.stringify({
         workflowId: OPUS_WORKFLOW_ID,
-        title: `Funda Property Search - ${searchParams.selected_area[0] || 'Unknown Area'}`,
+        title: `Funda Property Search - ${searchParams.city_list[0] || 'Unknown Area'}`,
         description: `Searching for properties with the following criteria: ${JSON.stringify(searchParams)}`
       })
     });
@@ -79,9 +79,6 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
         body: JSON.stringify({
             jobExecutionId: jobExecutionId,
             jobPayloadSchemaInstance: {
-                // This workflow expects a single object with all filter criteria.
-                // NOTE: You may need to replace 'filter_criteria' with the actual
-                // input variable name from your Opus workflow's jobPayloadSchema.
                 filter_criteria: {
                     value: searchParams,
                     type: 'object'
@@ -192,3 +189,5 @@ export async function fetchFundaResults(url: string) {
     throw new Error('Could not fetch results from Funda.');
   }
 }
+
+    

@@ -148,7 +148,14 @@ const HomeFindingAgent = () => {
 
     try {
       console.log("Attempting to fetch results via Opus workflow...");
-      const opusResults = await runOpusWorkflow(searchParams, fundaUrl);
+      
+      const opusPayload = {
+          ...searchParams,
+          city_list: searchParams.selected_area, // Rename selected_area to city_list
+      };
+      delete opusPayload.selected_area; // remove the old key
+
+      const opusResults = await runOpusWorkflow(opusPayload, fundaUrl);
       setProperties(opusResults);
       console.log("Successfully fetched results from Opus.");
     } catch (opusErr: any) {
@@ -170,6 +177,7 @@ const HomeFindingAgent = () => {
     }
   };
 
+
   const handleNext = () => {
     if (step < questions.length - 1) {
       setStep(step + 1);
@@ -185,32 +193,46 @@ const HomeFindingAgent = () => {
   };
 
   const buildFundaUrl = () => {
-    const parts: string[] = [];
-    const params = { ...searchParams };
-
-    if (params.selected_area && params.selected_area.length > 0) {
-        parts.push(`selected_area=${JSON.stringify(params.selected_area)}`);
-    }
-    if (params.price) {
-        parts.push(`price="${params.price}"`);
-    }
-    if (params.availability && params.availability.length > 0) {
-        parts.push(`availability=${JSON.stringify(params.availability)}`);
-    }
-    if (params.floor_area) {
-        parts.push(`floor_area="${params.floor_area}"`);
-    }
-    if (params.bedrooms) {
-        parts.push(`bedrooms="${params.bedrooms}"`);
-    }
-    if (params.energy_label && params.energy_label.length > 0) {
-        parts.push(`energy_label=${JSON.stringify(params.energy_label)}`);
-    }
-    if (params.construction_period && params.construction_period.length > 0) {
-        parts.push(`construction_period=${JSON.stringify(params.construction_period)}`);
+    const baseUrl = `https://www.funda.nl/en/zoeken/koop?`;
+    const queryParts: string[] = [];
+  
+    // Handle locations
+    if (searchParams.selected_area && searchParams.selected_area.length > 0) {
+      const locations = searchParams.selected_area.map(loc => `/${loc}/`).join('');
+      queryParts.push(`selected_area=["${searchParams.selected_area.join('","')}"]`);
     }
 
-    return `https://www.funda.nl/en/zoeken/koop?${parts.join('&')}`;
+    // Handle price
+    if (searchParams.price) {
+      queryParts.push(`price="${searchParams.price}"`);
+    }
+
+    // Handle availability
+    if (searchParams.availability && searchParams.availability.length > 0) {
+       queryParts.push(`availability=${JSON.stringify(searchParams.availability)}`);
+    }
+
+    // Handle floor area
+    if (searchParams.floor_area) {
+        queryParts.push(`floor_area="${searchParams.floor_area}"`);
+    }
+
+    // Handle bedrooms
+    if (searchParams.bedrooms) {
+        queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
+    }
+    
+    // Handle energy label
+    if (searchParams.energy_label && searchParams.energy_label.length > 0) {
+        queryParts.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
+    }
+
+    // Handle construction period
+    if (searchParams.construction_period && searchParams.construction_period.length > 0) {
+        queryParts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
+    }
+    
+    return baseUrl + queryParts.join('&');
   };
 
   const isCurrentStepValid = () => {
@@ -404,3 +426,5 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
+
+    

@@ -69,7 +69,7 @@ export async function runOpusWorkflow(searchParams: any) {
 
     const { jobExecutionId } = await initiateResponse.json();
 
-    // Step 2: Execute Job with the correct payload structure for the new workflow
+    // Step 2: Execute Job with the correct payload structure
     const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
         method: 'POST',
         headers: {
@@ -96,19 +96,17 @@ export async function runOpusWorkflow(searchParams: any) {
     const opusResults = await pollJobResults(jobExecutionId);
 
     let properties = null;
+    
+    const outputString = opusResults?.results?.result;
 
-    // Handle case where result is a JSON string
-    if (opusResults.result && typeof opusResults.result === 'string') {
+    // Handle case where result is a JSON string inside results.result
+    if (outputString && typeof outputString === 'string') {
         try {
-            const parsedResult = JSON.parse(opusResults.result);
+            const parsedResult = JSON.parse(outputString);
             properties = parsedResult.properties || null;
         } catch (e) {
             console.error("Could not parse result string from Opus", e);
         }
-    } 
-    // Handle case where result is an object
-    else if (opusResults.result && opusResults.result.properties) {
-        properties = opusResults.result.properties;
     }
     // Fallback for other possible structures
     else if (opusResults.properties) {

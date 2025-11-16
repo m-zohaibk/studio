@@ -2,7 +2,7 @@
 'use client';
 import React, { useState } from 'react';
 import { runOpusWorkflow, fetchFundaResults } from '@/app/actions';
-import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader } from 'lucide-react';
+import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import { Slider } from '@/components/ui/slider';
 
@@ -16,6 +16,17 @@ const HomeFindingAgent = () => {
     bedrooms: '',
     energy_label: [],
     construction_period: []
+  });
+  const [bookingInfo, setBookingInfo] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    postCode: '',
+    houseNumber: '',
+    addition: '',
+    wantToSellHouse: null,
+    hadFinancialConsultation: null,
   });
   const [showResults, setShowResults] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -114,29 +125,46 @@ const HomeFindingAgent = () => {
         { value: 'from_2011_to_2020', label: '2011 - 2020' },
         { value: 'from_2021', label: '2021 onwards' }
       ]
-    }
+    },
+     { id: 'email', question: "What's your email address?", icon: Mail, type: 'email_input', placeholder: 'john.doe@example.com', target: 'bookingInfo' },
+    { id: 'firstName', question: "What's your first name?", icon: User, type: 'text_input', placeholder: 'John', target: 'bookingInfo' },
+    { id: 'lastName', question: "What's your last name?", icon: User, type: 'text_input', placeholder: 'Doe', target: 'bookingInfo' },
+    { id: 'phone', question: "What's your phone number?", icon: Phone, type: 'tel_input', placeholder: '1234567890', target: 'bookingInfo' },
+    { id: 'postCode', question: "What's your postcode?", icon: Mailbox, type: 'text_input', placeholder: '1234 AB', target: 'bookingInfo' },
+    { id: 'houseNumber', question: "What's your house number?", icon: Home, type: 'text_input', placeholder: '123', target: 'bookingInfo' },
+    { id: 'addition', question: "Any addition? (optional)", icon: Plus, type: 'text_input', placeholder: 'e.g., A', target: 'bookingInfo', optional: true },
+    { id: 'wantToSellHouse', question: "Do you want to sell your current house?", icon: Repeat, type: 'boolean', options: [{value: true, label: 'Yes'}, {value: false, label: 'No'}], target: 'bookingInfo'},
+    { id: 'hadFinancialConsultation', question: "Have you had a financial consultation?", icon: Briefcase, type: 'boolean', options: [{value: true, label: 'Yes'}, {value: false, label: 'No'}], target: 'bookingInfo' },
   ];
 
   const currentQuestion = questions[step];
 
-  const handleSelection = (value: string | string[] | number[]) => {
+  const handleSelection = (value: any) => {
     const questionId = currentQuestion.id;
+    const targetState = currentQuestion.target === 'bookingInfo' ? bookingInfo : searchParams;
+    const setState = currentQuestion.target === 'bookingInfo' ? setBookingInfo : setSearchParams;
   
-    if (currentQuestion.type === 'text_input' && typeof value === 'string') {
-      const locations = value.split(',').map(loc => loc.trim().toLowerCase()).filter(Boolean);
-      setSearchParams({ ...searchParams, [questionId]: locations });
-    } else if ((currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') && typeof value === 'string') {
-      const currentValues = searchParams[questionId] || [];
+    if (currentQuestion.type === 'text_input' || currentQuestion.type === 'email_input' || currentQuestion.type === 'tel_input') {
+      if (questionId === 'selected_area') {
+         const locations = value.split(',').map((loc: string) => loc.trim().toLowerCase()).filter(Boolean);
+         setState({ ...targetState, [questionId]: locations });
+      } else {
+         setState({ ...targetState, [questionId]: value });
+      }
+    } else if ((currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox')) {
+      const currentValues = targetState[questionId] || [];
       const newValues = currentValues.includes(value)
         ? currentValues.filter((v: string) => v !== value)
         : [...currentValues, value];
-      setSearchParams({ ...searchParams, [questionId]: newValues });
+      setState({ ...targetState, [questionId]: newValues });
     } else if (currentQuestion.type === 'slider' && Array.isArray(value) && typeof value[0] === 'number') {
       setPriceRange(value as number[]);
       const priceString = `${value[0]}-${value[1]}`;
-      setSearchParams({ ...searchParams, [questionId]: priceString });
+      setState({ ...targetState, [questionId]: priceString });
+    } else if(currentQuestion.type === 'boolean') {
+        setState({ ...targetState, [questionId]: value });
     } else {
-      setSearchParams({ ...searchParams, [questionId]: value });
+      setState({ ...targetState, [questionId]: value });
     }
   };
 
@@ -150,7 +178,7 @@ const HomeFindingAgent = () => {
 
     // Ensure empty arrays are still sent if no selection was made
     questions.forEach(q => {
-        if ((q.type === 'multiselect' || q.type === 'multiselect_checkbox') && !apiSearchParams[q.id]) {
+        if (!q.target && (q.type === 'multiselect' || q.type === 'multiselect_checkbox') && !apiSearchParams[q.id]) {
             apiSearchParams[q.id] = [];
         }
     });
@@ -239,13 +267,13 @@ const HomeFindingAgent = () => {
 
   const isCurrentStepValid = () => {
     const questionId = currentQuestion.id;
-    const value = searchParams[questionId];
+    const value = currentQuestion.target === 'bookingInfo' ? bookingInfo[questionId as keyof typeof bookingInfo] : searchParams[questionId];
 
+    if (currentQuestion.optional) return true;
     if (questionId === 'price') return true; // Slider always has a value
-
-    if (Array.isArray(value)) {
-      return value.length > 0;
-    }
+    if (typeof value === 'boolean' || value === null) return value !== null;
+    if (Array.isArray(value)) return value.length > 0;
+    
     return !!value;
   };
 
@@ -270,6 +298,10 @@ const HomeFindingAgent = () => {
                   setSearchParams({
                     selected_area: [], price: '0-1000000', availability: [], floor_area: '',
                     bedrooms: '', energy_label: [], construction_period: []
+                  });
+                   setBookingInfo({
+                    email: '', firstName: '', lastName: '', phone: '', postCode: '',
+                    houseNumber: '', addition: '', wantToSellHouse: null, hadFinancialConsultation: null,
                   });
                   setPriceRange([0, 1000000]);
                 }}
@@ -319,6 +351,9 @@ const HomeFindingAgent = () => {
   }
 
   const Icon = currentQuestion.icon;
+  const targetState = currentQuestion.target === 'bookingInfo' ? bookingInfo : searchParams;
+  const value = targetState[currentQuestion.id as keyof typeof targetState];
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full flex justify-center items-center">
@@ -351,10 +386,10 @@ const HomeFindingAgent = () => {
           </div>
 
           <div className="space-y-3">
-            {currentQuestion.type === 'text_input' ? (
+            {currentQuestion.type === 'text_input' || currentQuestion.type === 'email_input' || currentQuestion.type === 'tel_input' ? (
               <input
-                type="text"
-                value={searchParams[currentQuestion.id]?.join(', ') || ''}
+                type={currentQuestion.type === 'email_input' ? 'email' : currentQuestion.type === 'tel_input' ? 'tel' : 'text'}
+                value={(currentQuestion.id === 'selected_area' ? value?.join(', ') : value) || ''}
                 onChange={(e) => handleSelection(e.target.value)}
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
@@ -377,7 +412,7 @@ const HomeFindingAgent = () => {
             ) : currentQuestion.type === 'multiselect_checkbox' ? (
               <div className="grid grid-cols-4 gap-2">
                 {currentQuestion.options.map((option: {value: string, label: string}) => {
-                  const isSelected = searchParams[currentQuestion.id]?.includes(option.value);
+                  const isSelected = value?.includes(option.value);
                   return (
                     <button
                       key={option.value}
@@ -393,11 +428,31 @@ const HomeFindingAgent = () => {
                   );
                 })}
               </div>
+            ) : currentQuestion.type === 'boolean' ? (
+                 currentQuestion.options.map((option: {value: boolean, label: string}) => {
+                    const isSelected = value === option.value;
+                    return (
+                        <button
+                        key={String(option.value)}
+                        onClick={() => handleSelection(option.value)}
+                        className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
+                            isSelected
+                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
+                        }`}
+                        >
+                        <div className="flex items-center justify-between">
+                            <span>{option.label}</span>
+                            {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
+                        </div>
+                        </button>
+                    );
+                 })
             ) : (
               currentQuestion.options.map((option: {value: string, label: string}) => {
                 const isSelected = currentQuestion.type === 'multiselect'
-                  ? searchParams[currentQuestion.id]?.includes(option.value)
-                  : searchParams[currentQuestion.id] === option.value;
+                  ? value?.includes(option.value)
+                  : value === option.value;
 
                 return (
                   <button
@@ -447,5 +502,3 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
-
-    

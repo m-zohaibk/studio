@@ -20,7 +20,7 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
 
     const status = await response.json();
 
-    if (status.status === 'completed') {
+    if (status.status === 'completed' || status.state === 'completed') {
       const resultsResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
         headers: { 'x-service-key': OPUS_SERVICE_KEY }
       });
@@ -30,8 +30,7 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
       }
       return await resultsResponse.json();
 
-    } else if (status.status === 'failed') {
-      // You might want to fetch job results even on failure to get error details
+    } else if (status.status === 'failed' || status.state === 'failed') {
       const results = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
         headers: { 'x-service-key': OPUS_SERVICE_KEY }
       });
@@ -71,8 +70,6 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
     const { jobExecutionId } = await initiateResponse.json();
 
     // Step 2: Execute Job
-    // The payload here must match your workflow's `jobPayloadSchema`.
-    // We are assuming the schema expects `searchParams` and `fundaUrl`.
     const executeResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/execute`, {
       method: 'POST',
       headers: {
@@ -80,10 +77,13 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
         'x-service-key': OPUS_SERVICE_KEY
       },
       body: JSON.stringify({
-        // IMPORTANT: The keys here ('search_parameters', 'funda_url') must match
-        // the `variable_name` in your Opus workflow's `jobPayloadSchema`.
-        // You may need to adjust these based on your actual workflow definition.
-        search_parameters: searchParams,
+        location: searchParams.selected_area[0] || 'Amsterdam',
+        budget: searchParams.price || '0-1000000',
+        availability: searchParams.availability || [],
+        energy_label: searchParams.energy_label || [],
+        minimum_bedrooms: parseInt(searchParams.bedrooms?.replace('-', '') || '1'),
+        minimum_floor_area: parseInt(searchParams.floor_area?.replace('-', '') || '50'),
+        construction_period: searchParams.construction_period || [],
         funda_url: fundaUrl
       })
     });
@@ -95,12 +95,31 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
 
-    // Assuming the workflow output has a field named 'properties' that contains the array.
-    // This needs to match your `jobResultsPayloadSchema`.
-    if (opusResults && opusResults.properties && Array.isArray(opusResults.properties)) {
-      return opusResults.properties;
+    // Handle various possible output structures from Opus
+    let properties = null;
+    if (opusResults.properties) {
+        properties = opusResults.properties;
+    } else if (opusResults.display_property_listings) {
+        properties = opusResults.display_property_listings;
+    } else if (opusResults.output && opusResults.output.properties) {
+        properties = opusResults.output.properties;
+    } else if (opusResults.result && opusResults.result.properties) {
+        properties = opusResults.result.properties;
+    }
+
+    if (properties && Array.isArray(properties)) {
+      // The API sometimes returns objects with keys like "Property Title"
+      // We need to normalize them to camelCase like "title" for our PropertyCard
+      return properties.map((prop: any) => ({
+        id: prop.id || Math.random(),
+        title: prop.title || prop['Property Title'],
+        address: prop.address || prop['Address'],
+        price: prop.price || prop['Price'],
+        imageUrl: prop.imageUrl || prop['Image URL'] || prop.image,
+        features: prop.features || [prop.bedrooms, prop.area].filter(Boolean)
+      }));
     } else {
-        console.warn("Opus results received, but the 'properties' array is missing or not an array.", opusResults);
+        console.warn("Opus results received, but a valid 'properties' array is missing.", opusResults);
         return [];
     }
 

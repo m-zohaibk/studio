@@ -185,34 +185,32 @@ const HomeFindingAgent = () => {
   };
 
   const buildFundaUrl = () => {
-    let url = 'https://www.funda.nl/en/zoeken/koop?';
-    const queryParts: string[] = [];
-  
-    const paramsToProcess = { ...searchParams };
-  
-    // Process selected_area
-    if (paramsToProcess.selected_area && paramsToProcess.selected_area.length > 0) {
-      queryParts.push(`selected_area=${JSON.stringify(paramsToProcess.selected_area)}`);
+    const parts: string[] = [];
+    const params = { ...searchParams };
+
+    if (params.selected_area && params.selected_area.length > 0) {
+        parts.push(`selected_area=${JSON.stringify(params.selected_area)}`);
     }
-  
-    // Process other parameters
-    Object.keys(paramsToProcess).forEach(key => {
-      if (key !== 'selected_area') {
-        const value = paramsToProcess[key];
-        if (value && value.length > 0) {
-          if (Array.isArray(value)) {
-            // For arrays, use JSON.stringify
-            queryParts.push(`${key}=${JSON.stringify(value)}`);
-          } else {
-            // For single string values, wrap in quotes
-            queryParts.push(`${key}="${value}"`);
-          }
-        }
-      }
-    });
-  
-    url += queryParts.join('&');
-    return url;
+    if (params.price) {
+        parts.push(`price="${params.price}"`);
+    }
+    if (params.availability && params.availability.length > 0) {
+        parts.push(`availability=${JSON.stringify(params.availability)}`);
+    }
+    if (params.floor_area) {
+        parts.push(`floor_area="${params.floor_area}"`);
+    }
+    if (params.bedrooms) {
+        parts.push(`bedrooms="${params.bedrooms}"`);
+    }
+    if (params.energy_label && params.energy_label.length > 0) {
+        parts.push(`energy_label=${JSON.stringify(params.energy_label)}`);
+    }
+    if (params.construction_period && params.construction_period.length > 0) {
+        parts.push(`construction_period=${JSON.stringify(params.construction_period)}`);
+    }
+
+    return `https://www.funda.nl/en/zoeken/koop?${parts.join('&')}`;
   };
 
   const isCurrentStepValid = () => {
@@ -335,7 +333,7 @@ const HomeFindingAgent = () => {
               />
             ) : currentQuestion.type === 'multiselect_checkbox' ? (
               <div className="grid grid-cols-4 gap-2">
-                {currentQuestion.options.map((option) => {
+                {currentQuestion.options.map((option: {value: string, label: string}) => {
                   const isSelected = searchParams[currentQuestion.id]?.includes(option.value);
                   return (
                     <button
@@ -353,7 +351,7 @@ const HomeFindingAgent = () => {
                 })}
               </div>
             ) : (
-              currentQuestion.options.map((option) => {
+              currentQuestion.options.map((option: {value: string, label: string}) => {
                 const isSelected = currentQuestion.type === 'multiselect'
                   ? searchParams[currentQuestion.id]?.includes(option.value)
                   : searchParams[currentQuestion.id] === option.value;

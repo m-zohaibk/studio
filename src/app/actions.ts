@@ -3,7 +3,7 @@
 import * as cheerio from 'cheerio';
 
 // --- Opus Workflow Configuration ---
-const OPUS_WORKFLOW_ID = 'P24vpwAkwbJWaZUL';
+const OPUS_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
 const OPUS_SERVICE_KEY = '_821bfa32d93785071b77f59030fc9b3b4130db5e57a95b12dbd31d33dae25bc589b4e1ff7bbae04f6d69317472317a33';
 const OPUS_BASE_URL = 'https://operator.opus.com';
 

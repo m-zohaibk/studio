@@ -116,7 +116,8 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
         address: prop.address || prop['Address'],
         price: prop.price || prop['Price'],
         imageUrl: prop.imageUrl || prop['Image URL'] || prop.image,
-        features: prop.features || [prop.bedrooms, prop.area].filter(Boolean)
+        features: prop.features || [prop.bedrooms, prop.area].filter(Boolean),
+        url: prop.url
       }));
     } else {
         console.warn("Opus results received, but a valid 'properties' array is missing.", opusResults);
@@ -153,6 +154,7 @@ export async function fetchFundaResults(url: string) {
       const address = $(el).find('[data-test-id="postal-code-city"]').text().trim();
       const price = $(el).find('[data-test-id="price-wrapper"]').text().trim().replace(/\s/g, '');
       const imageUrl = $(el).find('.search-result-image img').attr('src');
+      const propertyUrl = $(el).find('a').attr('href');
       
       const features: string[] = [];
        $(el).find('[data-test-id="property-features"] li').each((i, featureEl) => {
@@ -167,7 +169,8 @@ export async function fetchFundaResults(url: string) {
           address,
           price,
           imageUrl,
-          features
+          features,
+          url: propertyUrl ? `https://www.funda.nl${propertyUrl}` : url,
         });
       }
     });

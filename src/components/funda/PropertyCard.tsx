@@ -1,5 +1,6 @@
+
 import Image from 'next/image';
-import { BedDouble, Ruler, Zap, MapPin, CircleDollarSign } from 'lucide-react';
+import { BedDouble, Ruler, Zap, MapPin, CircleDollarSign, ExternalLink } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -18,6 +19,7 @@ interface PropertyCardProps {
         price: string;
         imageUrl?: string;
         features: string[];
+        url?: string;
     }
 }
 
@@ -32,6 +34,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = 'https://picsum.photos/seed/picsum/600/400';
+              target.srcset = '';
+            }}
             />
         ): (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -46,18 +53,29 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <span className="truncate">{property.address}</span>
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow p-4">
-        <div className="flex items-center gap-2 font-bold text-blue-600 text-xl">
+      <CardContent className="flex-grow p-4 pt-0">
+        <div className="flex items-center gap-2 font-bold text-blue-600 text-xl mb-4">
           <CircleDollarSign className="w-5 h-5" />
           <span>{property.price}</span>
         </div>
+         <div className="flex flex-wrap gap-2 text-sm">
+            {property.features?.map((feature, index) => (
+                <Badge key={index} variant="secondary" className="font-normal">
+                    {feature}
+                </Badge>
+            ))}
+        </div>
       </CardContent>
-      <CardFooter className="grid grid-cols-3 gap-2 text-sm bg-gray-50 p-4">
-        {property.features.slice(0, 3).map((feature, index) => (
-            <div key={index} className="flex items-center gap-1 text-gray-700">
-                <span>{feature}</span>
-            </div>
-        ))}
+      <CardFooter className="p-4 bg-gray-50">
+        <a
+            href={property.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all inline-flex items-center justify-center gap-2"
+        >
+            View Details
+            <ExternalLink className="w-4 h-4" />
+        </a>
       </CardFooter>
     </Card>
   );

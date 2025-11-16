@@ -3,12 +3,15 @@
 import * as cheerio from 'cheerio';
 
 // --- Opus Workflow Configuration ---
-const OPUS_WORKFLOW_ID = 'P24vpwAkwbJWaZUL';
-const OPUS_SERVICE_KEY = '_821bfa32d93785071b77f59030fc9b3b4130db5e57a95b12dbd31d33dae25bc589b4e1ff7bbae04f6d69317472317a33';
+const OPUS_WORKFLOW_ID = process.env.OPUS_WORKFLOW_ID;
+const OPUS_SERVICE_KEY = process.env.OPUS_SERVICE_KEY;
 const OPUS_BASE_URL = 'https://operator.opus.com';
 
 
 async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise<any> {
+  if (!OPUS_SERVICE_KEY) {
+    throw new Error('Opus service key is not configured.');
+  }
   for (let i = 0; i < maxAttempts; i++) {
     const response = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/status`, {
       headers: { 'x-service-key': OPUS_SERVICE_KEY }
@@ -48,6 +51,10 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
 
 
 export async function runOpusWorkflow(searchParams: any) {
+  if (!OPUS_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
+    throw new Error('Opus workflow ID or service key is not configured.');
+  }
+
   try {
     // Step 1: Initiate Job
     const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {

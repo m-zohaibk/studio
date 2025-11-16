@@ -69,24 +69,55 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
 
     const { jobExecutionId } = await initiateResponse.json();
 
-    // Step 2: Execute Job
-    const executeResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-key': OPUS_SERVICE_KEY
-      },
-      body: JSON.stringify({
-        location: searchParams.selected_area[0] || 'Amsterdam',
-        budget: searchParams.price || '0-1000000',
-        availability: searchParams.availability || [],
-        energy_label: searchParams.energy_label || [],
-        minimum_bedrooms: parseInt(searchParams.bedrooms?.replace('-', '') || '1'),
-        minimum_floor_area: parseInt(searchParams.floor_area?.replace('-', '') || '50'),
-        construction_period: searchParams.construction_period || [],
-        funda_url: fundaUrl
-      })
+    // Step 2: Execute Job with the correct payload structure
+    const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-service-key': OPUS_SERVICE_KEY
+        },
+        body: JSON.stringify({
+            jobExecutionId: jobExecutionId,
+            jobPayloadSchemaInstance: {
+                // NOTE: The keys here (e.g., "location") must match the `variable_name`
+                // in your Opus workflow's `jobPayloadSchema`.
+                // You may need to update these keys to match your exact workflow definition.
+                location: {
+                    value: searchParams.selected_area[0] || 'Amsterdam',
+                    type: 'str'
+                },
+                budget: {
+                    value: searchParams.price || '0-1000000',
+                    type: 'str'
+                },
+                availability: {
+                    value: searchParams.availability || [],
+                    type: 'array'
+                },
+                energy_label: {
+                    value: searchParams.energy_label || [],
+                    type: 'array'
+                },
+                minimum_bedrooms: {
+                    value: parseInt(searchParams.bedrooms?.replace('-', '') || '1'),
+                    type: 'float' // Using float as it's a common number type in Opus
+                },
+                minimum_floor_area: {
+                    value: parseInt(searchParams.floor_area?.replace('-', '') || '50'),
+                    type: 'float'
+                },
+                construction_period: {
+                    value: searchParams.construction_period || [],
+                    type: 'array'
+                },
+                funda_url: {
+                    value: fundaUrl,
+                    type: 'str'
+                }
+            }
+        })
     });
+
 
     if (!executeResponse.ok) {
       throw new Error(`Failed to execute Opus job: ${await executeResponse.text()}`);
@@ -96,16 +127,20 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
     const opusResults = await pollJobResults(jobExecutionId);
 
     // Handle various possible output structures from Opus
+    // This handles both the direct results and results nested under a "results" key.
+    const propertiesData = opusResults.results || opusResults;
+    
     let properties = null;
-    if (opusResults.properties) {
-        properties = opusResults.properties;
-    } else if (opusResults.display_property_listings) {
-        properties = opusResults.display_property_listings;
-    } else if (opusResults.output && opusResults.output.properties) {
-        properties = opusResults.output.properties;
-    } else if (opusResults.result && opusResults.result.properties) {
-        properties = opusResults.result.properties;
+    if (propertiesData.properties) {
+        properties = propertiesData.properties;
+    } else if (propertiesData.display_property_listings) {
+        properties = propertiesData.display_property_listings;
+    } else if (propertiesData.output && propertiesData.output.properties) {
+        properties = propertiesData.output.properties;
+    } else if (propertiesData.result && propertiesData.result.properties) {
+        properties = propertiesData.result.properties;
     }
+
 
     if (properties && Array.isArray(properties)) {
       // The API sometimes returns objects with keys like "Property Title"

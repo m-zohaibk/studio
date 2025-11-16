@@ -3,8 +3,8 @@
 import * as cheerio from 'cheerio';
 
 // --- Opus Workflow Configuration ---
-const OPUS_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
-const OPUS_SERVICE_KEY = '_ad3f2057d8bc4969f93641046bfd16601a79b7932436929d5c2636ce8933cbcf2e2f585b65dd5f2c6d6931757175636e';
+const OPUS_WORKFLOW_ID = 'P24vpwAkwbJWaZUL';
+const OPUS_SERVICE_KEY = '_821bfa32d93785071b77f59030fc9b3b4130db5e57a95b12dbd31d33dae25bc589b4e1ff7bbae04f6d69317472317a33';
 const OPUS_BASE_URL = 'https://operator.opus.com';
 
 
@@ -94,7 +94,7 @@ export async function runOpusWorkflow(searchParams: any) {
     
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
-
+    
     let properties = null;
     
     const outputString = opusResults?.results?.result;

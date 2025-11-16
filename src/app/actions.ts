@@ -79,9 +79,6 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
         body: JSON.stringify({
             jobExecutionId: jobExecutionId,
             jobPayloadSchemaInstance: {
-                // NOTE: The keys here (e.g., "location") must match the `variable_name`
-                // in your Opus workflow's `jobPayloadSchema`.
-                // You may need to update these keys to match your exact workflow definition.
                 location: {
                     value: searchParams.selected_area[0] || 'Amsterdam',
                     type: 'str'
@@ -100,7 +97,7 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
                 },
                 minimum_bedrooms: {
                     value: parseInt(searchParams.bedrooms?.replace('-', '') || '1'),
-                    type: 'float' // Using float as it's a common number type in Opus
+                    type: 'float'
                 },
                 minimum_floor_area: {
                     value: parseInt(searchParams.floor_area?.replace('-', '') || '50'),
@@ -127,35 +124,39 @@ export async function runOpusWorkflow(searchParams: any, fundaUrl: string) {
     const opusResults = await pollJobResults(jobExecutionId);
 
     // Handle various possible output structures from Opus
-    // This handles both the direct results and results nested under a "results" key.
     const propertiesData = opusResults.results || opusResults;
     
-    let properties = null;
-    if (propertiesData.properties) {
-        properties = propertiesData.properties;
-    } else if (propertiesData.display_property_listings) {
-        properties = propertiesData.display_property_listings;
-    } else if (propertiesData.output && propertiesData.output.properties) {
-        properties = propertiesData.output.properties;
-    } else if (propertiesData.result && propertiesData.result.properties) {
-        properties = propertiesData.result.properties;
+    // Updated to look for 'Display Property Listings' key based on the screenshot.
+    let properties = propertiesData['Display Property Listings'] || null;
+
+    if (!properties) {
+        // Fallback checks for other possible keys
+        if (propertiesData.properties) {
+            properties = propertiesData.properties;
+        } else if (propertiesData.display_property_listings) {
+            properties = propertiesData.display_property_listings;
+        } else if (propertiesData.output && propertiesData.output.properties) {
+            properties = propertiesData.output.properties;
+        } else if (propertiesData.result && propertiesData.result.properties) {
+            properties = propertiesData.result.properties;
+        }
     }
 
 
     if (properties && Array.isArray(properties)) {
-      // The API sometimes returns objects with keys like "Property Title"
-      // We need to normalize them to camelCase like "title" for our PropertyCard
+      // The API returns objects with keys like "image_url" and "property_url".
+      // We need to normalize them to camelCase like "imageUrl" and "url" for our PropertyCard.
       return properties.map((prop: any) => ({
         id: prop.id || Math.random(),
-        title: prop.title || prop['Property Title'],
-        address: prop.address || prop['Address'],
-        price: prop.price || prop['Price'],
-        imageUrl: prop.imageUrl || prop['Image URL'] || prop.image,
-        features: prop.features || [prop.bedrooms, prop.area].filter(Boolean),
-        url: prop.url
+        title: prop.title,
+        address: prop.address, // Assuming address is part of title or not provided.
+        price: prop.price,
+        imageUrl: prop.image_url,
+        features: [prop.bedrooms ? `${prop.bedrooms} bedrooms` : null, prop.area ? `${prop.area} m²` : null].filter(Boolean),
+        url: prop.property_url
       }));
     } else {
-        console.warn("Opus results received, but a valid 'properties' array is missing.", opusResults);
+        console.warn("Opus results received, but a valid property array is missing.", opusResults);
         return [];
     }
 

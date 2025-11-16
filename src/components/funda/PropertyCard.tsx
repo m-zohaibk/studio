@@ -48,10 +48,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       </div>
       <CardHeader className="p-4">
         <CardTitle className="font-bold text-lg leading-tight truncate text-gray-800">{property.title}</CardTitle>
-        <CardDescription className="flex items-center gap-2 pt-1 text-gray-600">
-          <MapPin className="w-4 h-4" />
-          <span className="truncate">{property.address}</span>
-        </CardDescription>
+        {property.address && (
+          <CardDescription className="flex items-center gap-2 pt-1 text-gray-600">
+            <MapPin className="w-4 h-4" />
+            <span className="truncate">{property.address}</span>
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-grow p-4 pt-0">
         <div className="flex items-center gap-2 font-bold text-blue-600 text-xl mb-4">

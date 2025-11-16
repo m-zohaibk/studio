@@ -4,12 +4,13 @@ import React, { useState } from 'react';
 import { runOpusWorkflow, fetchFundaResults } from '@/app/actions';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader } from 'lucide-react';
 import PropertyCard from './PropertyCard';
+import { Slider } from '@/components/ui/slider';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
   const [searchParams, setSearchParams] = useState<any>({
     selected_area: [],
-    price: '',
+    price: '0-1000000',
     availability: [],
     floor_area: '',
     bedrooms: '',
@@ -20,6 +21,7 @@ const HomeFindingAgent = () => {
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [priceRange, setPriceRange] = useState([0, 1000000]);
 
   const questions = [
     {
@@ -33,15 +35,10 @@ const HomeFindingAgent = () => {
       id: 'price',
       question: "What's your budget range?",
       icon: DollarSign,
-      type: 'select',
-      options: [
-        { value: '0-200000', label: 'Up to €200,000' },
-        { value: '200000-300000', label: '€200,000 - €300,000' },
-        { value: '300000-500000', label: '€300,000 - €500,000' },
-        { value: '500000-750000', label: '€500,000 - €750,000' },
-        { value: '750000-1000000', label: '€750,000 - €1,000,000' },
-        { value: '1000000-', label: 'Over €1,000,000' }
-      ]
+      type: 'slider',
+      min: 0,
+      max: 2000000,
+      step: 50000,
     },
     {
       id: 'availability',
@@ -122,10 +119,10 @@ const HomeFindingAgent = () => {
 
   const currentQuestion = questions[step];
 
-  const handleSelection = (value: string) => {
+  const handleSelection = (value: string | number[]) => {
     const questionId = currentQuestion.id;
     
-    if (currentQuestion.type === 'text_input') {
+    if (currentQuestion.type === 'text_input' && typeof value === 'string') {
         const locations = value.split(',').map(loc => loc.trim().toLowerCase()).filter(Boolean);
         setSearchParams({ ...searchParams, [questionId]: locations });
     } else if (currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox') {
@@ -134,6 +131,10 @@ const HomeFindingAgent = () => {
         ? currentValues.filter((v: string) => v !== value)
         : [...currentValues, value];
       setSearchParams({ ...searchParams, [questionId]: newValues });
+    } else if (currentQuestion.type === 'slider' && Array.isArray(value)) {
+        setPriceRange(value);
+        const priceString = `${value[0]}-${value[1]}`;
+        setSearchParams({ ...searchParams, [questionId]: priceString });
     } else {
       setSearchParams({ ...searchParams, [questionId]: value });
     }
@@ -254,9 +255,10 @@ const HomeFindingAgent = () => {
                   setProperties([]);
                   setError(null);
                   setSearchParams({
-                    selected_area: [], price: '', availability: [], floor_area: '',
+                    selected_area: [], price: '0-1000000', availability: [], floor_area: '',
                     bedrooms: '', energy_label: [], construction_period: []
                   });
+                  setPriceRange([0, 1000000]);
                 }}
                 className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
               >
@@ -344,6 +346,21 @@ const HomeFindingAgent = () => {
                 placeholder={currentQuestion.placeholder}
                 className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-gray-700 font-medium transition-all"
               />
+            ) : currentQuestion.type === 'slider' ? (
+                <div className="py-4">
+                     <div className="flex justify-between items-center mb-4">
+                        <span className="font-semibold text-lg text-gray-700">€{priceRange[0].toLocaleString()}</span>
+                        <span className="font-semibold text-lg text-gray-700">€{priceRange[1].toLocaleString()}</span>
+                    </div>
+                    <Slider
+                        defaultValue={priceRange}
+                        min={currentQuestion.min}
+                        max={currentQuestion.max}
+                        step={currentQuestion.step}
+                        onValueChange={(value) => handleSelection(value)}
+                        className="w-full"
+                    />
+                </div>
             ) : currentQuestion.type === 'multiselect_checkbox' ? (
               <div className="grid grid-cols-4 gap-2">
                 {currentQuestion.options.map((option: {value: string, label: string}) => {
@@ -417,3 +434,5 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
+
+    

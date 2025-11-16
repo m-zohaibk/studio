@@ -1,3 +1,4 @@
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BookUser, CheckCircle, Search, Sparkles, Target } from "lucide-react";
@@ -76,7 +77,7 @@ export default function Home() {
             <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl -z-10"></div>
             <div className="bg-white/60 backdrop-blur-sm p-6 rounded-3xl shadow-2xl ring-1 ring-black/5">
                 <Image
-                    src="/bird-mascot.png"
+                    src="https://picsum.photos/seed/lazynest/500/500"
                     alt="Lazy Nests Bird Mascot"
                     width={500}
                     height={500}

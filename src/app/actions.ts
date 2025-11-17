@@ -24,6 +24,7 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
     const status = await response.json();
 
     if (status.status === 'completed' || status.state === 'completed') {
+      console.log('Opus job completed, fetching results...');
       const resultsResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
         headers: { 'x-service-key': OPUS_SERVICE_KEY }
       });
@@ -31,7 +32,9 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
       if (!resultsResponse.ok) {
         throw new Error(`Failed to get Opus job results: ${await resultsResponse.text()}`);
       }
-      return await resultsResponse.json();
+      const resultsData = await resultsResponse.json();
+       console.log('Opus job raw results:', JSON.stringify(resultsData, null, 2));
+      return resultsData;
 
     } else if (status.status === 'failed' || status.state === 'failed') {
       const results = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
@@ -102,11 +105,12 @@ export async function runOpusWorkflow(searchParams: any) {
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
     
-    // According to the new documentation, the properties array is inside results.data.properties
-    const properties = opusResults?.results?.data?.properties;
+    // The properties array is inside results.data.properties
+    const properties = opusResults?.data?.properties;
 
 
     if (properties && Array.isArray(properties)) {
+      console.log(`Found ${properties.length} properties from Opus.`);
       // The API returns objects with keys like "address", "size", "rooms".
       // We need to normalize them for our PropertyCard.
       return properties.map((prop: any) => ({
@@ -123,7 +127,7 @@ export async function runOpusWorkflow(searchParams: any) {
         url: prop.url
       }));
     } else {
-        console.warn("Opus results received, but a valid property array is missing in results.data.properties.", opusResults);
+        console.warn("Opus results received, but a valid property array is missing in 'data.properties'.", opusResults);
         return [];
     }
 
@@ -173,7 +177,7 @@ export async function fetchFundaResults(url: string) {
           price,
           imageUrl,
           features,
-          url: propertyUrl ? `https://www.funda.nl${propertyUrl}` : url,
+          url: propertyUrl ? `https://www.funda.nl${propertyUrl}` : '#',
         });
       }
     });

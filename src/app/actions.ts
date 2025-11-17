@@ -3,7 +3,7 @@
 
 // --- Opus Workflow Configuration ---
 const CRAWLER_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
-const BOOKING_WORKFLOW_ID = 'ZCkcThVTmzvgNkL9';
+const BOOKING_WORKFLOW_ID = 'UJ855z3jUzjA6RSn';
 const OPUS_SERVICE_KEY = process.env.OPUS_SERVICE_KEY || '_725a31538bb686e434d64fbf5545b0a9cccfd0dc1c7ca631f71c4c85d2e866a1584dc12ac6ff883b6d6933366a646969';
 const OPUS_BASE_URL = 'https://operator.opus.com';
 

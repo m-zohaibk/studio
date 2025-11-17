@@ -1,8 +1,8 @@
 
 'use client';
-import React, { useState } from 'react';
-import { runOpusWorkflow, fetchFundaResults, runBookingWorkflow } from '@/app/actions';
-import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { initiateOpusJob, checkOpusJobStatus, getOpusJobResults, runBookingWorkflow } from '@/app/actions';
+import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ const HomeFindingAgent = () => {
     hadFinancialConsultation: null as boolean | null,
   });
   const [loading, setLoading] = useState(false);
+  const [pollingStatus, setPollingStatus] = useState('');
   const [properties, setProperties] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
@@ -168,9 +169,43 @@ const HomeFindingAgent = () => {
     setBookingInfo(prev => ({ ...prev, [field]: value }));
   };
 
+  const pollJob = async (jobExecutionId: string, attempts = 0) => {
+    const maxAttempts = 90;
+    if (attempts >= maxAttempts) {
+        setError("Search timed out. Please try again later.");
+        setPollingStatus("Search timed out.");
+        setLoading(false);
+        return;
+    }
+
+    try {
+        const { status } = await checkOpusJobStatus(jobExecutionId);
+        setPollingStatus(`Job status: ${status || 'In Progress'}`);
+
+        if (status === 'completed' || status === 'COMPLETED') {
+            setPollingStatus('Fetching results...');
+            const results = await getOpusJobResults(jobExecutionId);
+            setProperties(results);
+            setLoading(false);
+        } else if (status === 'failed' || status === 'FAILED') {
+            setError("Search failed. Please check your criteria and try again.");
+            setPollingStatus("Job failed.");
+            setLoading(false);
+        } else {
+            // If not completed or failed, poll again after a delay
+            setTimeout(() => pollJob(jobExecutionId, attempts + 1), 3000);
+        }
+    } catch (e: any) {
+        setError(e.message || "An error occurred while checking job status.");
+        setLoading(false);
+    }
+  };
+
   const handleFindHome = async () => {
     setLoading(true);
     setError(null);
+    setProperties([]);
+    setPollingStatus('Initializing search...');
     setView('results');
 
     const apiSearchParams = JSON.parse(JSON.stringify(searchParams));
@@ -182,26 +217,12 @@ const HomeFindingAgent = () => {
     });
 
     try {
-      console.log("Attempting to fetch results via Opus workflow with params:", apiSearchParams);
-      const opusResults = await runOpusWorkflow(apiSearchParams);
-      setProperties(opusResults);
-      console.log("Successfully fetched results from Opus.");
-    } catch (opusErr: any) {
-      console.warn("Opus workflow failed. Falling back to direct scraping.", opusErr.message);
-      setError("Primary search failed. Trying backup method...");
-      
-      const searchUrl = buildFundaUrl();
-      try {
-        console.log("Attempting direct scraping...");
-        const directResults = await fetchFundaResults(searchUrl);
-        setProperties(directResults);
-        setError(null);
-        console.log("Successfully fetched results via direct scraping.");
-      } catch (directErr: any) {
-        console.error("Direct scraping also failed.", directErr.message);
-        setError('Could not fetch results. Please try again later.');
-      }
-    } finally {
+      const { jobExecutionId } = await initiateOpusJob(apiSearchParams);
+      setPollingStatus('Job initiated, waiting for completion...');
+      pollJob(jobExecutionId); // Start polling
+    } catch (e: any) {
+      console.error("Failed to initiate search job.", e.message);
+      setError('Could not start the search. Please try again later.');
       setLoading(false);
     }
   };
@@ -273,35 +294,6 @@ const HomeFindingAgent = () => {
 
   };
 
-  const buildFundaUrl = () => {
-    const baseUrl = `https://www.funda.nl/en/zoeken/koop?`;
-    const queryParts: string[] = [];
-  
-    if (searchParams.selected_area && searchParams.selected_area.length > 0) {
-      queryParts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
-    }
-    if (searchParams.price) {
-      queryParts.push(`price="${searchParams.price}"`);
-    }
-    if (searchParams.availability && searchParams.availability.length > 0) {
-       queryParts.push(`availability=${JSON.stringify(searchParams.availability)}`);
-    }
-    if (searchParams.floor_area) {
-        queryParts.push(`floor_area="${searchParams.floor_area}"`);
-    }
-    if (searchParams.bedrooms) {
-        queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
-    }
-    if (searchParams.energy_label && searchParams.energy_label.length > 0) {
-        queryParts.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
-    }
-    if (searchParams.construction_period && searchParams.construction_period.length > 0) {
-        queryParts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
-    }
-    
-    return baseUrl + queryParts.join('&');
-  };
-
   const isCurrentStepValid = () => {
     const questionId = currentQuestion.id;
     const value = searchParams[questionId];
@@ -316,6 +308,24 @@ const HomeFindingAgent = () => {
     const { email, firstName, lastName, phone, postCode, houseNumber, wantToSellHouse, hadFinancialConsultation } = bookingInfo;
     return email && firstName && lastName && phone && postCode && houseNumber && wantToSellHouse !== null && hadFinancialConsultation !== null;
   };
+  
+  const resetSearch = () => {
+      setView('questionnaire');
+      setStep(0);
+      setProperties([]);
+      setError(null);
+      setLoading(false);
+      setPollingStatus('');
+      setSearchParams({
+        selected_area: [], price: '0-1000000', availability: [], floor_area: '',
+        bedrooms: '', energy_label: [], construction_period: []
+      });
+        setBookingInfo({
+        email: '', firstName: '', lastName: '', phone: '', postCode: '',
+        houseNumber: '', addition: '', wantToSellHouse: null, hadFinancialConsultation: null,
+      });
+      setPriceRange([0, 1000000]);
+  }
 
   if (view === 'results') {
     return (
@@ -336,21 +346,7 @@ const HomeFindingAgent = () => {
                 <p className="text-gray-600">Based on your search criteria</p>
               </div>
               <button
-                onClick={() => {
-                  setView('questionnaire');
-                  setStep(0);
-                  setProperties([]);
-                  setError(null);
-                  setSearchParams({
-                    selected_area: [], price: '0-1000000', availability: [], floor_area: '',
-                    bedrooms: '', energy_label: [], construction_period: []
-                  });
-                   setBookingInfo({
-                    email: '', firstName: '', lastName: '', phone: '', postCode: '',
-                    houseNumber: '', addition: '', wantToSellHouse: null, hadFinancialConsultation: null,
-                  });
-                  setPriceRange([0, 1000000]);
-                }}
+                onClick={resetSearch}
                 className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
               >
                 New Search
@@ -359,12 +355,15 @@ const HomeFindingAgent = () => {
             {loading ? (
                  <div className="flex flex-col items-center justify-center p-12">
                     <Loader className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Searching for properties...</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">{pollingStatus || 'Searching...'}</h2>
                     <p className="text-gray-600">Please wait while we find your perfect home</p>
                 </div>
             ) : error ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-yellow-800">{error}</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-center">
+                <p className="text-yellow-800 font-semibold">{error}</p>
+                 <button onClick={resetSearch} className="mt-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg">
+                    Try Again
+                </button>
               </div>
             ) : properties.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -372,7 +371,7 @@ const HomeFindingAgent = () => {
                 </div>
             ) : (
                 <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                    <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-gray-800 mb-2">No Properties Found</h3>
                     <p className="text-gray-600 mb-6">
                         We couldn't find any properties matching your criteria. Try a broader search.
@@ -564,7 +563,7 @@ const HomeFindingAgent = () => {
                         <Label>Do you want to sell your current house?</Label>
                          <div className="flex gap-2">
                             {[ { label: 'Yes', value: true }, { label: 'No', value: false }].map(opt => (
-                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('wantToSellHouse', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.wantToSellHouse === opt.value ? 'border-primary bg-primary/10' : 'border-input'}`}>{opt.label}</button>
+                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('wantToSellHouse', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.wantToSellHouse === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-input text-foreground'}`}>{opt.label}</button>
                             ))}
                          </div>
                     </div>
@@ -572,7 +571,7 @@ const HomeFindingAgent = () => {
                         <Label>Have you had a financial consultation?</Label>
                          <div className="flex gap-2">
                              {[ { label: 'Yes', value: true }, { label: 'No', value: false }].map(opt => (
-                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('hadFinancialConsultation', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.hadFinancialConsultation === opt.value ? 'border-primary bg-primary/10' : 'border-input'}`}>{opt.label}</button>
+                                <button key={String(opt.value)} onClick={() => handleBookingInfoChange('hadFinancialConsultation', opt.value)} className={`flex-1 p-3 rounded-lg border-2 text-sm font-semibold transition-all ${bookingInfo.hadFinancialConsultation === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-input text-foreground'}`}>{opt.label}</button>
                             ))}
                          </div>
                     </div>

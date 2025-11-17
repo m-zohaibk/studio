@@ -1,6 +1,5 @@
 
 'use server';
-import * as cheerio from 'cheerio';
 
 // --- Opus Workflow Configuration ---
 const CRAWLER_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
@@ -9,11 +8,66 @@ const OPUS_SERVICE_KEY = process.env.OPUS_SERVICE_KEY || '_725a31538bb686e434d64
 const OPUS_BASE_URL = 'https://operator.opus.com';
 
 
-async function pollJobResults(jobExecutionId: string, maxAttempts = 90): Promise<any> {
-  if (!OPUS_SERVICE_KEY) {
-    throw new Error('Opus service key is not configured.');
+export async function initiateOpusJob(searchParams: any) {
+  if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
+    throw new Error('Opus workflow ID or service key is not configured.');
   }
-  for (let i = 0; i < maxAttempts; i++) {
+
+  // Step 1: Initiate Job
+  const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-service-key': OPUS_SERVICE_KEY
+    },
+    body: JSON.stringify({
+      workflowId: CRAWLER_WORKFLOW_ID,
+      title: `Property Search - ${searchParams.selected_area[0] || 'Unknown Area'}`,
+      description: `Searching for properties with the following criteria: ${JSON.stringify(searchParams)}`
+    })
+  });
+
+  if (!initiateResponse.ok) {
+    throw new Error(`Failed to initiate Opus job: ${await initiateResponse.text()}`);
+  }
+
+  const { jobExecutionId } = await initiateResponse.json();
+  console.log(`Opus job initiated with ID: ${jobExecutionId}`);
+
+
+  // Step 2: Execute Job with the correct payload structure
+  const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+          'x-service-key': OPUS_SERVICE_KEY
+      },
+      body: JSON.stringify({
+          jobExecutionId: jobExecutionId,
+          jobPayloadSchemaInstance: {
+              city_list: {
+                  value: searchParams,
+                  type: 'object'
+              }
+          }
+      })
+  });
+
+
+  if (!executeResponse.ok) {
+    throw new Error(`Failed to execute Opus job: ${await executeResponse.text()}`);
+  }
+  
+  console.log(`Opus job executed for ID: ${jobExecutionId}`);
+  return { jobExecutionId };
+}
+
+export async function checkOpusJobStatus(jobExecutionId: string) {
+    if (!OPUS_SERVICE_KEY) {
+        throw new Error('Opus service key is not configured.');
+    }
+    
+    console.log(`Checking status for job ID: ${jobExecutionId}`);
     const response = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/status`, {
       headers: { 'x-service-key': OPUS_SERVICE_KEY }
     });
@@ -22,98 +76,37 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 90): Promise
       throw new Error(`Failed to check Opus job status: ${await response.text()}`);
     }
 
-    const status = await response.json();
+    const statusData = await response.json();
+    console.log(`Status for job ${jobExecutionId}: ${statusData.status || statusData.state}`);
+    return { status: statusData.status || statusData.state };
+}
 
-    if (status.status === 'completed' || status.state === 'completed') {
-      console.log('Opus job completed, fetching results...');
-      const resultsResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
-        headers: { 'x-service-key': OPUS_SERVICE_KEY }
-      });
-
-      if (!resultsResponse.ok) {
-        throw new Error(`Failed to get Opus job results: ${await resultsResponse.text()}`);
-      }
-      const resultsData = await resultsResponse.json();
-       console.log('Opus job raw results:', JSON.stringify(resultsData, null, 2));
-      return resultsData;
-
-    } else if (status.status === 'failed' || status.state === 'failed') {
-      const results = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
-        headers: { 'x-service-key': OPUS_SERVICE_KEY }
-      });
-      const errorDetails = await results.json();
-      console.error('Opus job failed:', errorDetails);
-      throw new Error(`Opus job failed: ${JSON.stringify(errorDetails)}`);
+export async function getOpusJobResults(jobExecutionId: string) {
+    if (!OPUS_SERVICE_key) {
+        throw new Error('Opus service key is not configured.');
     }
 
-    // Wait 2 seconds before polling again
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }
-
-  throw new Error('Opus job timed out after ' + maxAttempts * 2 + ' seconds.');
-};
-
-
-export async function runOpusWorkflow(searchParams: any) {
-  if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
-    throw new Error('Opus workflow ID or service key is not configured.');
-  }
-
-  try {
-    // Step 1: Initiate Job
-    const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-key': OPUS_SERVICE_KEY
-      },
-      body: JSON.stringify({
-        workflowId: CRAWLER_WORKFLOW_ID,
-        title: `Property Search - ${searchParams.selected_area[0] || 'Unknown Area'}`,
-        description: `Searching for properties with the following criteria: ${JSON.stringify(searchParams)}`
-      })
+    console.log(`Fetching results for completed job ID: ${jobExecutionId}`);
+    const resultsResponse = await fetch(`${OPUS_BASE_URL}/job/${jobExecutionId}/results`, {
+        headers: { 'x-service-key': OPUS_SERVICE_KEY }
     });
 
-    if (!initiateResponse.ok) {
-      throw new Error(`Failed to initiate Opus job: ${await initiateResponse.text()}`);
+    if (!resultsResponse.ok) {
+        const errorText = await resultsResponse.text();
+        console.error(`Failed to get Opus job results for ${jobExecutionId}:`, errorText);
+        throw new Error(`Failed to get Opus job results: ${errorText}`);
     }
 
-    const { jobExecutionId } = await initiateResponse.json();
+    const opusResults = await resultsResponse.json();
+    console.log('Opus job raw results:', JSON.stringify(opusResults, null, 2));
 
-    // Step 2: Execute Job with the correct payload structure
-    const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-service-key': OPUS_SERVICE_KEY
-        },
-        body: JSON.stringify({
-            jobExecutionId: jobExecutionId,
-            jobPayloadSchemaInstance: {
-                city_list: {
-                    value: searchParams,
-                    type: 'object'
-                }
-            }
-        })
-    });
-
-
-    if (!executeResponse.ok) {
-      throw new Error(`Failed to execute Opus job: ${await executeResponse.text()}`);
-    }
-    
-    // Step 3: Poll for results
-    const opusResults = await pollJobResults(jobExecutionId);
-    
-    // The result is a deeply nested, stringified JSON.
     if (opusResults && opusResults.jobResultsPayloadSchema) {
         const schema = opusResults.jobResultsPayloadSchema;
-        const resultKey = Object.keys(schema)[0]; // Get the dynamic key e.g., 'workflow_output_i8hgxg4dr'
+        const resultKey = Object.keys(schema)[0];
         
         if (resultKey && schema[resultKey] && typeof schema[resultKey].value === 'string') {
-            const parsedResult = JSON.parse(schema[resultKey].value);
-            const properties = parsedResult.properties;
+            const parsedValue = JSON.parse(schema[resultKey].value);
+            const properties = parsedValue.properties;
 
             if (properties && Array.isArray(properties)) {
                 console.log(`Found ${properties.length} properties from Opus.`);
@@ -133,17 +126,11 @@ export async function runOpusWorkflow(searchParams: any) {
             }
         }
     }
-    
+
     console.warn("Opus results received, but a valid property array was not found in the expected structure.", opusResults);
     return [];
-
-
-  } catch (error) {
-    console.error('Error executing Opus workflow:', error);
-    // Re-throw the error so the calling component knows it failed.
-    throw error;
-  }
 }
+
 
 export async function runBookingWorkflow(bookingData: any) {
   if (!BOOKING_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
@@ -193,7 +180,7 @@ export async function runBookingWorkflow(bookingData: any) {
     }
     
     // We can poll here if we need to confirm the booking was processed
-    const finalStatus = await pollJobResults(jobExecutionId);
+    const finalStatus = await pollJobStatus(jobExecutionId);
     console.log("Booking job finished with status:", finalStatus);
     
     // Return a success message or the final status
@@ -202,56 +189,5 @@ export async function runBookingWorkflow(bookingData: any) {
   } catch (error) {
     console.error('Error running booking workflow:', error);
     throw error;
-  }
-}
-
-
-export async function fetchFundaResults(url: string) {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const properties: any[] = [];
-    $('[data-test-id="search-result-item"]').each((i, el) => {
-      const title = $(el).find('[data-test-id="street-name-house-number"]').text().trim();
-      const address = $(el).find('[data-test-id="postal-code-city"]').text().trim();
-      const price = $(el).find('[data-test-id="price-wrapper"]').text().trim().replace(/\s/g, '');
-      const imageUrl = $(el).find('.search-result-image img').attr('src');
-      const propertyUrl = $(el).find('a').attr('href');
-      
-      const features: string[] = [];
-       $(el).find('[data-test-id="property-features"] li').each((i, featureEl) => {
-            features.push($(featureEl).text().trim());
-       });
-
-
-      if (title && address && price) {
-        properties.push({
-          id: i,
-          title,
-          address,
-          price,
-          imageUrl,
-          features,
-          url: propertyUrl ? `https://www.funda.nl${propertyUrl}` : '#',
-        });
-      }
-    });
-
-    return properties;
-  } catch (error) {
-    console.error('Error scraping results:', error);
-    throw new Error('Could not fetch results from the property service.');
   }
 }

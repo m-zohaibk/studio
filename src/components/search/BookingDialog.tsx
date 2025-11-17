@@ -25,6 +25,8 @@ interface BookingDialogProps {
     day_slots: string[];
   }) => Promise<{ success: boolean }>;
   property: any;
+  isBookingAll?: boolean;
+  propertyCount?: number;
 }
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -34,7 +36,7 @@ const timeSlots = [
 
 ];
 
-export default function BookingDialog({ isOpen, onClose, onSubmit, property }: BookingDialogProps) {
+export default function BookingDialog({ isOpen, onClose, onSubmit, property, isBookingAll, propertyCount }: BookingDialogProps) {
   const [bookingMessage, setBookingMessage] = useState('');
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [daySlots, setDaySlots] = useState<string[]>([]);
@@ -67,13 +69,19 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
   
   const isFormValid = availableDays.length > 0 && daySlots.length > 0;
 
+  const title = isBookingAll ? 'Book All Properties' : 'Book a Viewing';
+  const description = isBookingAll
+    ? `Submit your availability for all ${propertyCount} found properties.`
+    : `Submit your availability for: ${property?.title}`;
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Book a Viewing</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Submit your availability for: <span className="font-semibold">{property?.title}</span>
+            {description}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

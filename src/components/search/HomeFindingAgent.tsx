@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { initiateOpusJob, checkOpusJobStatus, getOpusJobResults, runBookingWorkflow } from '@/app/actions';
-import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search } from 'lucide-react';
+import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search, BookMarked } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import BookingDialog from './BookingDialog'; // Import the new component
 import { useToast } from "@/hooks/use-toast"
 import BookingConfirmation from './BookingConfirmation';
+import { Button } from '@/components/ui/button';
 
 type View = 'questionnaire' | 'booking' | 'results' | 'confirmation';
 
@@ -49,6 +50,7 @@ const HomeFindingAgent = () => {
     perfectMatches: 0,
     viewingsBooked: 0,
   });
+  const [isBookingAll, setIsBookingAll] = useState(false);
 
   const searchQuestions = [
     {
@@ -257,16 +259,40 @@ const HomeFindingAgent = () => {
     setSelectedProperty(property);
     setBookingDialogOpen(true);
   };
+  
+  const openBookAllDialog = () => {
+    if (properties.length === 0) return;
+    setIsBookingAll(true);
+    setBookingDialogOpen(true);
+  };
+
 
   const handleBookViewing = async (bookingDetails: {
     booking_message: string;
     available_days: string[];
     day_slots: string[];
   }) => {
-    if (!selectedProperty) return { success: false };
+    let urlsToBook: string[] = [];
+    if (isBookingAll) {
+        urlsToBook = properties.map(p => p.url).filter(Boolean);
+    } else if (selectedProperty) {
+        urlsToBook = [selectedProperty.url];
+    } else {
+        return { success: false };
+    }
+    
+    if (urlsToBook.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No properties to book",
+            description: "There are no valid properties to book.",
+        });
+        return { success: false };
+    }
+
 
     const finalBookingData = {
-      urls: [selectedProperty.url],
+      urls: urlsToBook,
       booking_message: bookingDetails.booking_message,
       email: bookingInfo.email,
       first_name: bookingInfo.firstName,
@@ -283,7 +309,7 @@ const HomeFindingAgent = () => {
     
     try {
         await runBookingWorkflow(finalBookingData);
-        setConfirmationStats(prev => ({ ...prev, viewingsBooked: prev.viewingsBooked + 1 }));
+        setConfirmationStats(prev => ({ ...prev, viewingsBooked: prev.viewingsBooked + urlsToBook.length }));
         setView('confirmation');
         return { success: true };
     } catch (e: any) {
@@ -297,6 +323,7 @@ const HomeFindingAgent = () => {
     } finally {
         setBookingDialogOpen(false);
         setSelectedProperty(null);
+        setIsBookingAll(false);
     }
 
   };
@@ -349,25 +376,39 @@ const HomeFindingAgent = () => {
       <div className="min-h-screen bg-background p-6 w-full">
         <BookingDialog
           isOpen={isBookingDialogOpen}
-          onClose={() => setBookingDialogOpen(false)}
+          onClose={() => {
+            setBookingDialogOpen(false);
+            setSelectedProperty(null);
+            setIsBookingAll(false);
+          }}
           onSubmit={handleBookViewing}
           property={selectedProperty}
+          isBookingAll={isBookingAll}
+          propertyCount={properties.length}
         />
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
               <div>
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
                   Search Results
                 </h2>
                 <p className="text-gray-600">Based on your search criteria</p>
               </div>
-              <button
-                onClick={resetSearch}
-                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-              >
-                New Search
-              </button>
+              <div className="flex gap-2">
+                 <Button
+                    onClick={openBookAllDialog}
+                    disabled={loading || properties.length === 0}
+                 >
+                    <BookMarked className="mr-2" /> Book All Properties ({properties.length})
+                </Button>
+                <Button
+                  onClick={resetSearch}
+                  variant="outline"
+                >
+                  New Search
+                </Button>
+              </div>
             </div>
             {loading ? (
                  <div className="flex flex-col items-center justify-center p-12">
@@ -378,9 +419,9 @@ const HomeFindingAgent = () => {
             ) : error ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-center">
                 <p className="text-yellow-800 font-semibold">{error}</p>
-                 <button onClick={resetSearch} className="mt-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg">
+                 <Button onClick={resetSearch} className="mt-4">
                     Try Again
-                </button>
+                </Button>
               </div>
             ) : properties.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

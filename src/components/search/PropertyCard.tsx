@@ -1,6 +1,6 @@
 
 import Image from 'next/image';
-import { BedDouble, Ruler, Zap, MapPin, CircleDollarSign, ExternalLink } from 'lucide-react';
+import { BedDouble, Ruler, Zap, MapPin, CircleDollarSign, ExternalLink, CalendarPlus } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+
 
 interface PropertyCardProps {
     property: {
@@ -20,10 +22,11 @@ interface PropertyCardProps {
         imageUrl?: string;
         features: string[];
         url?: string;
-    }
+    };
+    onBookViewing: () => void;
 }
 
-export default function PropertyCard({ property }: PropertyCardProps) {
+export default function PropertyCard({ property, onBookViewing }: PropertyCardProps) {
   return (
     <Card className="flex flex-col overflow-hidden h-full transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-white rounded-2xl">
       <div className="relative w-full h-48">
@@ -68,16 +71,22 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             ))}
         </div>
       </CardContent>
-      <CardFooter className="p-4 bg-gray-50">
-        <a
-            href={property.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full text-center bg-primary text-primary-foreground px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-all inline-flex items-center justify-center gap-2"
-        >
-            View Details
-            <ExternalLink className="w-4 h-4" />
-        </a>
+      <CardFooter className="p-4 bg-gray-50 grid grid-cols-2 gap-2">
+        <Button variant="outline" asChild>
+            <a
+                href={property.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+            >
+                View Details
+                <ExternalLink className="w-4 h-4 ml-2" />
+            </a>
+        </Button>
+         <Button onClick={onBookViewing}>
+            Book Viewing
+            <CalendarPlus className="w-4 h-4 ml-2" />
+        </Button>
       </CardFooter>
     </Card>
   );

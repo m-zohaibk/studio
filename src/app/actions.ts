@@ -3,8 +3,9 @@
 import * as cheerio from 'cheerio';
 
 // --- Opus Workflow Configuration ---
-const OPUS_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
-const OPUS_SERVICE_KEY = '_ad3f2057d8bc4969f93641046bfd16601a79b7932436929d5c2636ce8933cbcf2e2f585b65dd5f2c6d6931757175636e';
+const CRAWLER_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
+const BOOKING_WORKFLOW_ID = 'ZCkcThVTmzvgNkL9';
+const OPUS_SERVICE_KEY = '_725a31538bb686e434d64fbf5545b0a9cccfd0dc1c7ca631f71c4c85d2e866a1584dc12ac6ff883b6d6933366a646969';
 const OPUS_BASE_URL = 'https://operator.opus.com';
 
 
@@ -54,7 +55,7 @@ async function pollJobResults(jobExecutionId: string, maxAttempts = 30): Promise
 
 
 export async function runOpusWorkflow(searchParams: any) {
-  if (!OPUS_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
+  if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
     throw new Error('Opus workflow ID or service key is not configured.');
   }
 
@@ -67,7 +68,7 @@ export async function runOpusWorkflow(searchParams: any) {
         'x-service-key': OPUS_SERVICE_KEY
       },
       body: JSON.stringify({
-        workflowId: OPUS_WORKFLOW_ID,
+        workflowId: CRAWLER_WORKFLOW_ID,
         title: `Property Search - ${searchParams.selected_area[0] || 'Unknown Area'}`,
         description: `Searching for properties with the following criteria: ${JSON.stringify(searchParams)}`
       })
@@ -105,35 +106,96 @@ export async function runOpusWorkflow(searchParams: any) {
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
     
-    // The properties array is inside results.data.properties
-    const properties = opusResults?.data?.properties;
+    // The result is a JSON string in the 'result' field.
+    if (opusResults && typeof opusResults.result === 'string') {
+        const parsedResult = JSON.parse(opusResults.result);
+        const properties = parsedResult.properties;
 
-
-    if (properties && Array.isArray(properties)) {
-      console.log(`Found ${properties.length} properties from Opus.`);
-      // The API returns objects with keys like "address", "size", "rooms".
-      // We need to normalize them for our PropertyCard.
-      return properties.map((prop: any) => ({
-        id: prop.url || Math.random(),
-        title: prop.address, // Use address as title
-        address: prop.address,
-        price: prop.price,
-        imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
-        features: [
-            prop.rooms ? `${prop.rooms} rooms` : null, 
-            prop.size ? `${prop.size}` : null,
-            prop.energy_label ? `Label: ${prop.energy_label}`: null,
-        ].filter(Boolean),
-        url: prop.url
-      }));
-    } else {
-        console.warn("Opus results received, but a valid property array is missing in 'data.properties'.", opusResults);
-        return [];
+        if (properties && Array.isArray(properties)) {
+          console.log(`Found ${properties.length} properties from Opus.`);
+          return properties.map((prop: any) => ({
+            id: prop.url || Math.random(),
+            title: prop.address,
+            address: prop.address,
+            price: prop.price,
+            imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+            features: [
+                prop.rooms ? `${prop.rooms} rooms` : null, 
+                prop.size ? `${prop.size}` : null,
+                prop.energy_label ? `Label: ${prop.energy_label}`: null,
+            ].filter(Boolean),
+            url: prop.url
+          }));
+        }
     }
+    
+    console.warn("Opus results received, but a valid property array was not found in the 'result' field.", opusResults);
+    return [];
+
 
   } catch (error) {
     console.error('Error executing Opus workflow:', error);
     // Re-throw the error so the calling component knows it failed.
+    throw error;
+  }
+}
+
+export async function runBookingWorkflow(bookingData: any) {
+  if (!BOOKING_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
+    throw new Error('Opus booking workflow ID or service key is not configured.');
+  }
+
+  try {
+    console.log("Initiating booking workflow with data:", bookingData);
+    const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-service-key': OPUS_SERVICE_KEY
+      },
+      body: JSON.stringify({
+        workflowId: BOOKING_WORKFLOW_ID,
+        title: `Booking Request for ${bookingData.first_name} ${bookingData.last_name}`,
+        description: `Booking for property: ${bookingData.url}`
+      })
+    });
+
+     if (!initiateResponse.ok) {
+      throw new Error(`Failed to initiate Opus booking job: ${await initiateResponse.text()}`);
+    }
+
+    const { jobExecutionId } = await initiateResponse.json();
+
+     const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-service-key': OPUS_SERVICE_KEY
+        },
+        body: JSON.stringify({
+            jobExecutionId: jobExecutionId,
+            jobPayloadSchemaInstance: {
+                booking_details: {
+                    value: bookingData,
+                    type: 'object'
+                }
+            }
+        })
+    });
+
+     if (!executeResponse.ok) {
+      throw new Error(`Failed to execute Opus booking job: ${await executeResponse.text()}`);
+    }
+    
+    // We can poll here if we need to confirm the booking was processed
+    const finalStatus = await pollJobResults(jobExecutionId);
+    console.log("Booking job finished with status:", finalStatus);
+    
+    // Return a success message or the final status
+    return { success: true, message: 'Booking request submitted successfully!', status: finalStatus };
+
+  } catch (error) {
+    console.error('Error running booking workflow:', error);
     throw error;
   }
 }
@@ -188,3 +250,4 @@ export async function fetchFundaResults(url: string) {
     throw new Error('Could not fetch results from the property service.');
   }
 }
+

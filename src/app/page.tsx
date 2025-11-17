@@ -78,7 +78,7 @@ export default function Home() {
             <div className="bg-white/60 backdrop-blur-sm p-6 rounded-3xl shadow-2xl ring-1 ring-black/5">
                 <Image
                     src="https://images.unsplash.com/photo-1552728634-c6d4ac754a26?q=80&w=500&h=500&fit=crop"
-                    alt="Lazy Nests Bird Mascot"
+                    alt="A small bird in its nest"
                     width={500}
                     height={500}
                     priority
@@ -89,7 +89,7 @@ export default function Home() {
              <div className="absolute top-8 -right-8 inline-flex items-center gap-2 px-4 py-2 text-white bg-primary rounded-full shadow-lg">
                 <Sparkles className="w-5 h-5" /> AI Powered
             </div>
-             <div className="absolute bottom-8 -left-8 inline-flex items-center gap-2 px-4 py-2 text-white bg-blue-500 rounded-full shadow-lg">
+             <div className="absolute bottom-8 -left-8 inline-flex items-center gap-2 px-4 py-2 text-blue-500 rounded-full shadow-lg">
                 <CheckCircle className="w-5 h-5" /> Fast & Easy
             </div>
           </div>
@@ -175,3 +175,4 @@ export default function Home() {
     </div>
   );
 }
+

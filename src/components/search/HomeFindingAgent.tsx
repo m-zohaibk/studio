@@ -1,12 +1,14 @@
 
 'use client';
 import React, { useState } from 'react';
-import { runOpusWorkflow, fetchFundaResults } from '@/app/actions';
+import { runOpusWorkflow, fetchFundaResults, runBookingWorkflow } from '@/app/actions';
 import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import BookingDialog from './BookingDialog'; // Import the new component
+import { useToast } from "@/hooks/use-toast"
 
 type View = 'questionnaire' | 'booking' | 'results';
 
@@ -37,6 +39,9 @@ const HomeFindingAgent = () => {
   const [properties, setProperties] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
+  const [isBookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
+  const { toast } = useToast();
 
   const searchQuestions = [
     {
@@ -219,6 +224,54 @@ const HomeFindingAgent = () => {
       setStep(step - 1);
     }
   };
+  
+  const openBookingDialog = (property: any) => {
+    setSelectedProperty(property);
+    setBookingDialogOpen(true);
+  };
+
+  const handleBookViewing = async (bookingDetails: {
+    booking_message: string;
+    available_days: string[];
+    day_slots: string[];
+  }) => {
+    if (!selectedProperty) return;
+
+    const finalBookingData = {
+      url: selectedProperty.url,
+      booking_message: bookingDetails.booking_message,
+      email: bookingInfo.email,
+      first_name: bookingInfo.firstName,
+      last_name: bookingInfo.lastName,
+      phone: bookingInfo.phone,
+      post_code: bookingInfo.postCode,
+      house_number: bookingInfo.houseNumber,
+      addition: bookingInfo.addition,
+      want_to_sell_house: bookingInfo.wantToSellHouse,
+      had_financial_consultation: bookingInfo.hadFinancialConsultation,
+      available_days: bookingDetails.available_days,
+      day_slots: bookingDetails.day_slots,
+    };
+    
+    try {
+        await runBookingWorkflow(finalBookingData);
+        toast({
+            title: "Booking Request Sent!",
+            description: "The real estate agent has been notified. They will contact you shortly.",
+        });
+    } catch (e: any) {
+        console.error("Booking failed", e);
+        toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong.",
+            description: "Could not send booking request. " + e.message,
+        });
+    } finally {
+        setBookingDialogOpen(false);
+        setSelectedProperty(null);
+    }
+
+  };
 
   const buildFundaUrl = () => {
     const baseUrl = `https://www.funda.nl/en/zoeken/koop?`;
@@ -267,6 +320,12 @@ const HomeFindingAgent = () => {
   if (view === 'results') {
     return (
       <div className="min-h-screen bg-background p-6 w-full">
+        <BookingDialog
+          isOpen={isBookingDialogOpen}
+          onClose={() => setBookingDialogOpen(false)}
+          onSubmit={handleBookViewing}
+          property={selectedProperty}
+        />
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             <div className="flex items-center justify-between mb-6">
@@ -309,7 +368,7 @@ const HomeFindingAgent = () => {
               </div>
             ) : properties.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {properties.map((prop) => <PropertyCard key={prop.id} property={prop} />)}
+                    {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
                 </div>
             ) : (
                 <div className="bg-white rounded-xl shadow-lg p-12 text-center">
@@ -458,7 +517,7 @@ const HomeFindingAgent = () => {
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Next
+                {step === searchQuestions.length - 1 ? 'Next' : 'Next'}
               </button>
             </div>
           </>

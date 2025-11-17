@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Feather } from 'lucide-react';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { LanguageProvider } from '@/components/i18n/LanguageProvider';
 import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
 
@@ -30,7 +29,6 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased bg-background text-foreground")}>
-      <FirebaseClientProvider>
           <LanguageProvider>
             <header className="absolute top-0 left-0 right-0 z-10 py-4 px-4 sm:px-6 lg:px-8">
               <nav className="container mx-auto flex items-center justify-between">
@@ -55,7 +53,6 @@ export default function RootLayout({
               {children}
               <Toaster />
           </LanguageProvider>
-        </FirebaseClientProvider>
       </body>
     </html>
   );

@@ -1,10 +1,6 @@
 
 "use server";
 
-import * as admin from 'firebase-admin';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
 // --- Opus Workflow Configuration ---
 const CRAWLER_WORKFLOW_ID = "P24vpwAkwbJWaZUL";
 const BOOKING_WORKFLOW_ID = "UJ855z3jUzjA6RSn";
@@ -14,32 +10,6 @@ const OPUS_SERVICE_KEY =
 
 const OPUS_BASE_URL = "https://operator.opus.com";
 
-if (!getApps().length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string))
-    });
-     console.log("Firebase Admin initialized successfully.");
-  } catch (error: any) {
-    console.error("Firebase Admin initialization error:", error.message);
-  }
-}
-
-
-export async function saveSearchRequest(data: any) {
-  try {
-    const db = getFirestore();
-    const docRef = await db.collection('propertySearchRequests').add({
-      ...data,
-      createdAt: new Date().toISOString(),
-    });
-    console.log("Document written with ID: ", docRef.id);
-    return { success: true, id: docRef.id };
-  } catch (e) {
-    console.error("Error adding document: ", e);
-    return { success: false, error: "Failed to save search request." };
-  }
-}
 
 export async function initiateOpusJob(searchParams: any) {
   if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
@@ -376,4 +346,3 @@ export async function checkOpusJobStatusWithKey(
   );
   return { status: statusData.status || statusData.state };
 }
-

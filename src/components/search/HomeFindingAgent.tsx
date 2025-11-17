@@ -259,7 +259,7 @@ const HomeFindingAgent = () => {
     if (!selectedProperty) return;
 
     const finalBookingData = {
-      url: selectedProperty.url,
+      urls: [selectedProperty.url],
       booking_message: bookingDetails.booking_message,
       email: bookingInfo.email,
       first_name: bookingInfo.firstName,

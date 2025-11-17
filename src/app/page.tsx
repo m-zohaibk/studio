@@ -77,10 +77,10 @@ export default function Home() {
             <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl -z-10"></div>
             <div className="bg-white/60 backdrop-blur-sm p-6 rounded-3xl shadow-2xl ring-1 ring-black/5">
                 <Image
-                    src="https://images.unsplash.com/photo-1552728634-c6d4ac754a26?q=80&w=500&h=500&fit=crop"
+                    src="/lazy-bird-mascot.png"
                     alt="A small bird in its nest"
-                    width={500}
-                    height={500}
+                    width={450}
+                    height={450}
                     priority
                     className="rounded-2xl"
                     data-ai-hint="bird nest"

@@ -28,7 +28,11 @@ interface BookingDialogProps {
 }
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const timeSlots = ['Morning (9am-12pm)', 'Afternoon (1pm-5pm)', 'Evening (6pm-9pm)'];
+const timeSlots = [
+    { value: 'Morning', label: 'Morning (9am-12pm)' },
+    { value: 'Afternoon', label: 'Afternoon (1pm-5pm)' },
+    { value: 'Evening', label: 'Evening (6pm-9pm)' }
+];
 
 export default function BookingDialog({ isOpen, onClose, onSubmit, property }: BookingDialogProps) {
   const [bookingMessage, setBookingMessage] = useState('');
@@ -41,9 +45,9 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
     );
   };
 
-  const handleSlotToggle = (slot: string) => {
+  const handleSlotToggle = (slotValue: string) => {
     setDaySlots(prev => 
-      prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]
+      prev.includes(slotValue) ? prev.filter(s => s !== slotValue) : [...prev, slotValue]
     );
   };
 
@@ -95,17 +99,17 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
             <Label>What times of day work best?</Label>
             <div className="grid grid-cols-1 gap-2">
               {timeSlots.map(slot => (
-                 <div key={slot} className="flex items-center space-x-2">
+                 <div key={slot.value} className="flex items-center space-x-2">
                     <Checkbox 
-                        id={slot}
-                        checked={daySlots.includes(slot)}
-                        onCheckedChange={() => handleSlotToggle(slot)}
+                        id={slot.value}
+                        checked={daySlots.includes(slot.value)}
+                        onCheckedChange={() => handleSlotToggle(slot.value)}
                     />
                     <label
-                        htmlFor={slot}
+                        htmlFor={slot.value}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      {slot}
+                      {slot.label}
                     </label>
                 </div>
               ))}
@@ -122,4 +126,3 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
     </Dialog>
   );
 }
-

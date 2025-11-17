@@ -3,8 +3,8 @@
 import * as cheerio from 'cheerio';
 
 // --- Opus Workflow Configuration ---
-const OPUS_WORKFLOW_ID = process.env.OPUS_WORKFLOW_ID;
-const OPUS_SERVICE_KEY = process.env.OPUS_SERVICE_KEY;
+const OPUS_WORKFLOW_ID = 'RblK0hTljCNVKHhb';
+const OPUS_SERVICE_KEY = '_ad3f2057d8bc4969f93641046bfd16601a79b7932436929d5c2636ce8933cbcf2e2f585b65dd5f2c6d6931757175636e';
 const OPUS_BASE_URL = 'https://operator.opus.com';
 
 
@@ -102,23 +102,8 @@ export async function runOpusWorkflow(searchParams: any) {
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
     
-    let properties = null;
-    
-    const outputString = opusResults?.results?.result;
-
-    // Handle case where result is a JSON string inside results.result
-    if (outputString && typeof outputString === 'string') {
-        try {
-            const parsedResult = JSON.parse(outputString);
-            properties = parsedResult.properties || null;
-        } catch (e) {
-            console.error("Could not parse result string from Opus", e);
-        }
-    }
-    // Fallback for other possible structures
-    else if (opusResults.properties) {
-        properties = opusResults.properties;
-    }
+    // According to the new documentation, the properties array is inside results.data.properties
+    const properties = opusResults?.results?.data?.properties;
 
 
     if (properties && Array.isArray(properties)) {
@@ -138,7 +123,7 @@ export async function runOpusWorkflow(searchParams: any) {
         url: prop.url
       }));
     } else {
-        console.warn("Opus results received, but a valid property array is missing.", opusResults);
+        console.warn("Opus results received, but a valid property array is missing in results.data.properties.", opusResults);
         return [];
     }
 

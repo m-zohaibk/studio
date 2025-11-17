@@ -29,9 +29,9 @@ interface BookingDialogProps {
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const timeSlots = [
-    { value: 'Morning', label: 'Morning (9am-12pm)' },
-    { value: 'Afternoon', label: 'Afternoon (1pm-5pm)' },
-    { value: 'Evening', label: 'Evening (6pm-9pm)' }
+    { value: 'morning', label: 'Morning (9am-12pm)' },
+    { value: 'afternoon', label: 'Afternoon (1pm-5pm)' },
+    { value: 'evening', label: 'Evening (6pm-9pm)' }
 ];
 
 export default function BookingDialog({ isOpen, onClose, onSubmit, property }: BookingDialogProps) {

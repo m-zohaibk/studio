@@ -82,7 +82,7 @@ export async function checkOpusJobStatus(jobExecutionId: string) {
 }
 
 export async function getOpusJobResults(jobExecutionId: string) {
-    if (!OPUS_SERVICE_key) {
+    if (!OPUS_SERVICE_KEY) {
         throw new Error('Opus service key is not configured.');
     }
 
@@ -105,24 +105,29 @@ export async function getOpusJobResults(jobExecutionId: string) {
         const resultKey = Object.keys(schema)[0];
         
         if (resultKey && schema[resultKey] && typeof schema[resultKey].value === 'string') {
-            const parsedValue = JSON.parse(schema[resultKey].value);
-            const properties = parsedValue.properties;
+            try {
+                const parsedValue = JSON.parse(schema[resultKey].value);
+                const properties = parsedValue.properties;
 
-            if (properties && Array.isArray(properties)) {
-                console.log(`Found ${properties.length} properties from Opus.`);
-                return properties.map((prop: any) => ({
-                    id: prop.url || Math.random(),
-                    title: prop.address,
-                    address: prop.address,
-                    price: prop.price,
-                    imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
-                    features: [
-                        prop.rooms ? `${prop.rooms} rooms` : null, 
-                        prop.size ? `${prop.size}` : null,
-                        prop.energy_label ? `Label: ${prop.energy_label}`: null,
-                    ].filter(Boolean),
-                    url: prop.url
-                }));
+                if (properties && Array.isArray(properties)) {
+                    console.log(`Found ${properties.length} properties from Opus.`);
+                    return properties.map((prop: any) => ({
+                        id: prop.url || Math.random(),
+                        title: prop.address,
+                        address: prop.address,
+                        price: prop.price,
+                        imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+                        features: [
+                            prop.rooms ? `${prop.rooms} rooms` : null, 
+                            prop.size ? `${prop.size}` : null,
+                            prop.energy_label ? `Label: ${prop.energy_label}`: null,
+                        ].filter(Boolean),
+                        url: prop.url
+                    }));
+                }
+            } catch (e) {
+                 console.error("Failed to parse properties from Opus result value:", e);
+                 throw new Error("Could not parse property data from the search result.");
             }
         }
     }
@@ -190,4 +195,19 @@ export async function runBookingWorkflow(bookingData: any) {
     console.error('Error running booking workflow:', error);
     throw error;
   }
+}
+
+async function pollJobStatus(jobExecutionId: string, maxAttempts = 30) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const { status } = await checkOpusJobStatus(jobExecutionId);
+    if (status === 'COMPLETED' || status === 'completed') {
+      return status;
+    }
+    if (status === 'FAILED' || status === 'failed') {
+      console.error(`Booking job ${jobExecutionId} failed.`);
+      return status;
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  return 'TIMED_OUT';
 }

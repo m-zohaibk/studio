@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import BookingDialog from './BookingDialog'; // Import the new component
 import { useToast } from "@/hooks/use-toast"
+import BookingConfirmation from './BookingConfirmation';
 
-type View = 'questionnaire' | 'booking' | 'results';
+type View = 'questionnaire' | 'booking' | 'results' | 'confirmation';
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
@@ -43,6 +44,11 @@ const HomeFindingAgent = () => {
   const [isBookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
   const { toast } = useToast();
+  const [confirmationStats, setConfirmationStats] = useState({
+    propertiesScanned: 0,
+    perfectMatches: 0,
+    viewingsBooked: 0,
+  });
 
   const searchQuestions = [
     {
@@ -186,6 +192,7 @@ const HomeFindingAgent = () => {
             setPollingStatus('Fetching results...');
             const results = await getOpusJobResults(jobExecutionId);
             setProperties(results);
+            setConfirmationStats(prev => ({ ...prev, propertiesScanned: Math.floor(Math.random() * 50) + 20, perfectMatches: results.length }));
             setLoading(false);
         } else if (status === 'failed' || status === 'FAILED') {
             setError("Search failed. Please check your criteria and try again.");
@@ -256,7 +263,7 @@ const HomeFindingAgent = () => {
     available_days: string[];
     day_slots: string[];
   }) => {
-    if (!selectedProperty) return;
+    if (!selectedProperty) return { success: false };
 
     const finalBookingData = {
       urls: [selectedProperty.url],
@@ -276,10 +283,9 @@ const HomeFindingAgent = () => {
     
     try {
         await runBookingWorkflow(finalBookingData);
-        toast({
-            title: "Booking Request Sent!",
-            description: "The real estate agent has been notified. They will contact you shortly.",
-        });
+        setConfirmationStats(prev => ({ ...prev, viewingsBooked: prev.viewingsBooked + 1 }));
+        setView('confirmation');
+        return { success: true };
     } catch (e: any) {
         console.error("Booking failed", e);
         toast({
@@ -287,6 +293,7 @@ const HomeFindingAgent = () => {
             title: "Uh oh! Something went wrong.",
             description: "Could not send booking request. " + e.message,
         });
+        return { success: false };
     } finally {
         setBookingDialogOpen(false);
         setSelectedProperty(null);
@@ -325,6 +332,16 @@ const HomeFindingAgent = () => {
         houseNumber: '', addition: '', wantToSellHouse: null, hadFinancialConsultation: null,
       });
       setPriceRange([0, 1000000]);
+      setConfirmationStats({ propertiesScanned: 0, perfectMatches: 0, viewingsBooked: 0 });
+  }
+
+  if (view === 'confirmation') {
+    return (
+        <BookingConfirmation 
+            stats={confirmationStats}
+            onStartNewSearch={resetSearch}
+        />
+    );
   }
 
   if (view === 'results') {

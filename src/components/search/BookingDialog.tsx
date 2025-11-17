@@ -23,7 +23,7 @@ interface BookingDialogProps {
     booking_message: string;
     available_days: string[];
     day_slots: string[];
-  }) => void;
+  }) => Promise<{ success: boolean }>;
   property: any;
 }
 
@@ -38,6 +38,7 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
   const [bookingMessage, setBookingMessage] = useState('');
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [daySlots, setDaySlots] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleDayToggle = (day: string) => {
     setAvailableDays(prev => 
@@ -51,12 +52,17 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
     );
   };
 
-  const handleSubmit = () => {
-    onSubmit({
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    const { success } = await onSubmit({
       booking_message: bookingMessage,
       available_days: availableDays,
       day_slots: daySlots,
     });
+    setIsSubmitting(false);
+    if (success) {
+      onClose();
+    }
   };
   
   const isFormValid = availableDays.length > 0 && daySlots.length > 0;
@@ -117,9 +123,9 @@ export default function BookingDialog({ isOpen, onClose, onSubmit, property }: B
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!isFormValid}>
-            Submit Request
+          <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit Request'}
           </Button>
         </DialogFooter>
       </DialogContent>

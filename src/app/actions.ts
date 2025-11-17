@@ -106,30 +106,35 @@ export async function runOpusWorkflow(searchParams: any) {
     // Step 3: Poll for results
     const opusResults = await pollJobResults(jobExecutionId);
     
-    // The result is a JSON string in the 'result' field.
-    if (opusResults && typeof opusResults.result === 'string') {
-        const parsedResult = JSON.parse(opusResults.result);
-        const properties = parsedResult.properties;
+    // The result is a deeply nested, stringified JSON.
+    if (opusResults && opusResults.jobResultsPayloadSchema) {
+        const schema = opusResults.jobResultsPayloadSchema;
+        const resultKey = Object.keys(schema)[0]; // Get the dynamic key e.g., 'workflow_output_i8hgxg4dr'
+        
+        if (resultKey && schema[resultKey] && typeof schema[resultKey].value === 'string') {
+            const parsedResult = JSON.parse(schema[resultKey].value);
+            const properties = parsedResult.properties;
 
-        if (properties && Array.isArray(properties)) {
-          console.log(`Found ${properties.length} properties from Opus.`);
-          return properties.map((prop: any) => ({
-            id: prop.url || Math.random(),
-            title: prop.address,
-            address: prop.address,
-            price: prop.price,
-            imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
-            features: [
-                prop.rooms ? `${prop.rooms} rooms` : null, 
-                prop.size ? `${prop.size}` : null,
-                prop.energy_label ? `Label: ${prop.energy_label}`: null,
-            ].filter(Boolean),
-            url: prop.url
-          }));
+            if (properties && Array.isArray(properties)) {
+                console.log(`Found ${properties.length} properties from Opus.`);
+                return properties.map((prop: any) => ({
+                    id: prop.url || Math.random(),
+                    title: prop.address,
+                    address: prop.address,
+                    price: prop.price,
+                    imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+                    features: [
+                        prop.rooms ? `${prop.rooms} rooms` : null, 
+                        prop.size ? `${prop.size}` : null,
+                        prop.energy_label ? `Label: ${prop.energy_label}`: null,
+                    ].filter(Boolean),
+                    url: prop.url
+                }));
+            }
         }
     }
     
-    console.warn("Opus results received, but a valid property array was not found in the 'result' field.", opusResults);
+    console.warn("Opus results received, but a valid property array was not found in the expected structure.", opusResults);
     return [];
 
 

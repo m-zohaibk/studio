@@ -1,51 +1,44 @@
-# Funda Finder
+# LazyNest 🐦
 
-This is a Next.js application designed to help users find real estate properties. It features a multi-step, conversational questionnaire to gather user preferences, fetches live data from a major real estate platform, and displays the results directly within the app.
+**LazyNest** is an intelligent, AI-powered application designed to automate and accelerate the process of finding and booking rental properties in competitive markets. Built for the **AI GENESIS HACKATHON 2025 by lablab.ai**, this project gives users a significant competitive advantage by being the first to find and book viewings for new listings.
 
-## Core Technologies
+## What It Does: The LazyNest Advantage
 
-- **Next.js:** Used for the React framework, including Server Components and Server Actions.
-- **Tailwind CSS & shadcn/ui:** For styling and UI components.
-- **Genkit (AI):** For validating and structuring user input into a searchable query.
-- **Cheerio:** For server-side web scraping of the search results.
-- **TypeScript:** For type safety.
+LazyNest streamlines the entire property-finding journey into four simple, automated steps:
 
-## Project Structure and Key Functions
+1.  **🔍 Search:** Users define their ideal property criteria through a friendly, multi-step questionnaire. This includes location, price range, size, number of bedrooms, and more.
+2.  **🤖 Scan:** Our system leverages a powerful backend workflow (Opus) to continuously scan real estate platforms for new listings that match the user's criteria, 24/7.
+3.  **🎯 Match:** The moment a matching property is found, it is instantly presented to the user in a clean, easy-to-review interface.
+4.  **📅 Book:** Users can book viewings for individual properties or all matched properties at once with a single click. The system handles the booking request process automatically, ensuring the user is first in line.
 
-### `src/app/page.tsx`
+## Key Features
 
-The main entry point of the application. It simply renders the primary `HomeFindingAgent` component.
+- **Conversational Search**: An intuitive, multi-step form to capture detailed user preferences.
+- **Automated Property Crawling**: Leverages Opus workflows to monitor real estate sites for new listings in real-time.
+- **Instant Matching & Results**: Displays qualified properties directly in the app as they are found.
+- **One-Click Booking**: Allows users to book viewings for one or all matched properties instantly, dramatically speeding up the application process.
+- **Internationalization**: Supports both English and Dutch to cater to a wider audience.
+- **Responsive & Modern UI**: A clean, user-friendly interface built with modern design principles.
 
-### `src/components/search/HomeFindingAgent.tsx`
+## Architecture & Integrations
 
-This is the core component of the user interface. It is responsible for:
-- **Multi-Step Questionnaire:** Manages a series of questions to gather user preferences for location, price, size, etc.
-- **State Management:** Uses React's `useState` hook to keep track of the user's answers, the current step in the questionnaire, loading state, and final search results.
-- **URL Construction:** Contains the `buildFundaUrl` function, which dynamically constructs the precise URL needed to perform a search based on the user's selections.
-- **Data Fetching Trigger:** Calls the `fetchFundaResults` server action to initiate the scraping process.
-- **Displaying Results:** Renders the `PropertyCard` components for each found property or shows a "No properties found" message.
+LazyNest is built on a modern, server-centric architecture designed for performance and scalability.
 
-### `src/components/search/PropertyCard.tsx`
+- **Frontend**: A Next.js application utilizing the App Router, Server Components, and React hooks for a fast, interactive user experience.
+- **Backend Logic**: Next.js Server Actions are used to handle all server-side operations, providing a seamless bridge between the client and backend services without needing a separate API layer.
+- **Workflow Automation (Integration)**: The core of our automated search and booking capabilities is powered by **Opus**. We use two primary Opus workflows:
+    - **Crawler Workflow**: Initiated with the user's search criteria to continuously scan for new properties.
+    - **Booking Workflow**: Triggered when a user requests to book a viewing, which then automates the communication with the real estate agent's platform.
+- **AI (Genkit)**: Although currently used for type definitions, the project is set up with Genkit to potentially extend its AI capabilities, such as validating user input or summarizing property descriptions in the future.
 
-A presentational component that displays a single property listing. It takes a `property` object as a prop and renders its details—such as image, title, address, and price—in a styled card.
+## Tech Stack
 
-### `src/app/actions.ts`
+- **Framework**: Next.js (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Workflow Automation**: Opus
+- **AI Toolkit**: Genkit
+- **Deployment**: Firebase App Hosting
 
-This file contains Next.js Server Actions that run exclusively on the server.
-
-- **`fetchFundaResults(url: string)`:**
-  - This asynchronous function is the heart of the data-gathering process.
-  - It takes the generated search URL as input.
-  - It uses `fetch` to get the HTML content of the search results page, spoofing a user agent to prevent being blocked.
-  - It then uses the `cheerio` library to parse the HTML and scrape the data for each property listing, targeting specific `data-test-id` attributes to ensure stability.
-  - It returns an array of property objects that can be displayed by the frontend.
-
-### `src/ai/flows/validate-and-structure-property-query.ts`
-
-This file defines a Genkit AI flow used for processing user input.
-
-- **`validateAndStructurePropertyQuery(...)`:**
-  - This flow takes the raw user input from the form.
-  - It uses a GenAI model to validate, clean, and structure the data into a searchable query format.
-  - For example, it ensures that a comma-separated string of locations like `"amsterdam, utrecht"` is correctly converted into an array `["amsterdam", "utrecht"]`.
-  - While not currently used in the final URL building step, it demonstrates how AI can be used to normalize complex user input.
+This combination of technologies allows for rapid development, a high-quality user experience, and a powerful, automated backend.

@@ -281,14 +281,12 @@ export async function runBookingWorkflow(bookingData: any) {
     }
 
     // We can poll here if we need to confirm the booking was processed
-    const finalStatus = await pollJobStatus(jobExecutionId, OPUS_SERVICE_KEY);
-    console.log("Booking job finished with status:", finalStatus);
-
-    // Return a success message or the final status
+    await pollJobStatus(jobExecutionId, OPUS_SERVICE_KEY);
+    
+    // Return a simple, clean success object
     return {
       success: true,
       message: "Booking request submitted successfully!",
-      status: finalStatus,
     };
   } catch (error) {
     console.error("Error running booking workflow:", error);

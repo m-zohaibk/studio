@@ -403,12 +403,6 @@ const HomeFindingAgent = () => {
                 <p className="text-gray-600">Based on your search criteria</p>
               </div>
               <div className="flex gap-2">
-                 <Button
-                    onClick={openBookAllDialog}
-                    disabled={loading || properties.length === 0}
-                 >
-                    <BookMarked className="mr-2" /> Book All Properties ({properties.length})
-                </Button>
                 <Button
                   onClick={resetSearch}
                   variant="outline"
@@ -431,9 +425,21 @@ const HomeFindingAgent = () => {
                 </Button>
               </div>
             ) : properties.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
-                </div>
+                <>
+                  <div className="max-h-[calc(100vh-400px)] overflow-y-auto mb-6 pr-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={openBookAllDialog}
+                    disabled={loading || properties.length === 0}
+                    size="lg"
+                    className="w-full py-6 text-lg font-semibold"
+                  >
+                    <BookMarked className="mr-2 w-6 h-6" /> Book All {properties.length} Viewings Automatically
+                  </Button>
+                </>
             ) : (
                 <div className="bg-white rounded-xl shadow-lg p-12 text-center">
                     <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />

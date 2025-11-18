@@ -15,7 +15,7 @@ const LanguageSwitcher = () => {
 
   return (
     <Button onClick={toggleLanguage} variant="ghost" size="icon" aria-label="Switch language">
-      {language === 'en' ? <UkFlag className="w-6 h-6" /> : <NlFlag className="w-6 h-6" />}
+      {language === 'en' ? <UkFlag className="w-16 h-16" /> : <NlFlag className="w-16 h-16" />}
     </Button>
   );
 };

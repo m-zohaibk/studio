@@ -10,6 +10,7 @@ interface BookingConfirmationProps {
         viewingsBooked: number;
     };
     onStartNewSearch: () => void;
+    onViewMyBookings: () => void;
 }
 
 const StatCard = ({ icon: Icon, value, label }: { icon: React.ElementType, value: number | string, label: string }) => (
@@ -21,7 +22,7 @@ const StatCard = ({ icon: Icon, value, label }: { icon: React.ElementType, value
 );
 
 
-export default function BookingConfirmation({ stats, onStartNewSearch }: BookingConfirmationProps) {
+export default function BookingConfirmation({ stats, onStartNewSearch, onViewMyBookings }: BookingConfirmationProps) {
     return (
         <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 text-center">
             <div className="flex justify-center items-center w-24 h-24 bg-green-500 rounded-full mx-auto mb-6">
@@ -32,7 +33,7 @@ export default function BookingConfirmation({ stats, onStartNewSearch }: Booking
                 All Set! 🎉
             </h1>
             <p className="text-lg text-gray-600 mb-8">
-                Your viewings have been successfully scheduled
+                Your viewing requests have been successfully submitted.
             </p>
 
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 text-left mb-8">
@@ -49,7 +50,6 @@ export default function BookingConfirmation({ stats, onStartNewSearch }: Booking
                             <li>Viewing dates and times</li>
                             <li>Agent contact information</li>
                             <li>Property addresses with directions</li>
-                            <li>Parking and arrival instructions</li>
                         </ul>
                     </div>
                 </div>
@@ -58,14 +58,14 @@ export default function BookingConfirmation({ stats, onStartNewSearch }: Booking
             <div className="grid grid-cols-3 gap-4 mb-8">
                 <StatCard icon={Scan} value={stats.propertiesScanned} label="Properties Scanned" />
                 <StatCard icon={Target} value={stats.perfectMatches} label="Perfect Matches" />
-                <StatCard icon={BookMarked} value={`${stats.viewingsBooked}/${stats.perfectMatches}`} label="Viewings Booked" />
+                <StatCard icon={BookMarked} value={`${stats.viewingsBooked}/${stats.perfectMatches}`} label="Viewings Requested" />
             </div>
 
             <div className="flex flex-col gap-4">
                 <Button size="lg" onClick={onStartNewSearch} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                     <Search className="mr-2" /> Start a New Search
                 </Button>
-                <Button size="lg" variant="outline" className="w-full">
+                <Button size="lg" variant="outline" className="w-full" onClick={onViewMyBookings}>
                     <BookMarked className="mr-2" /> View My Bookings
                 </Button>
             </div>

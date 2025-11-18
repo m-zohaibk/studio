@@ -174,7 +174,12 @@ const HomeFindingAgent = () => {
   };
 
   const handleBookingInfoChange = (field: keyof typeof bookingInfo, value: string | boolean | null) => {
-    setBookingInfo(prev => ({ ...prev, [field]: value }));
+    if (field === 'postCode' && typeof value === 'string') {
+        const formattedPostcode = value.replace(/\s/g, '').toUpperCase();
+        setBookingInfo(prev => ({ ...prev, [field]: formattedPostcode }));
+    } else {
+        setBookingInfo(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const pollJob = async (jobExecutionId: string, attempts = 0) => {
@@ -257,11 +262,13 @@ const HomeFindingAgent = () => {
   
   const openBookingDialog = (property: any) => {
     setSelectedProperty(property);
+    setIsBookingAll(false);
     setBookingDialogOpen(true);
   };
   
   const openBookAllDialog = () => {
     if (properties.length === 0) return;
+    setSelectedProperty(null);
     setIsBookingAll(true);
     setBookingDialogOpen(true);
   };
@@ -278,6 +285,11 @@ const HomeFindingAgent = () => {
     } else if (selectedProperty) {
         urlsToBook = [selectedProperty.url];
     } else {
+        toast({
+            variant: "destructive",
+            title: "No properties selected",
+            description: "Something went wrong, no properties were selected for booking.",
+        });
         return { success: false };
     }
     
@@ -289,7 +301,6 @@ const HomeFindingAgent = () => {
         });
         return { success: false };
     }
-
 
     const finalBookingData = {
       urls: urlsToBook,
@@ -306,26 +317,20 @@ const HomeFindingAgent = () => {
       available_days: bookingDetails.available_days,
       day_slots: bookingDetails.day_slots,
     };
-    
-    try {
-        await runBookingWorkflow(finalBookingData);
-        setConfirmationStats(prev => ({ ...prev, viewingsBooked: prev.viewingsBooked + urlsToBook.length }));
-        setView('confirmation');
-        return { success: true };
-    } catch (e: any) {
-        console.error("Booking failed", e);
-        toast({
-            variant: "destructive",
-            title: "Uh oh! Something went wrong.",
-            description: "Could not send booking request. " + e.message,
-        });
-        return { success: false };
-    } finally {
-        setBookingDialogOpen(false);
-        setSelectedProperty(null);
-        setIsBookingAll(false);
-    }
 
+    // Don't await the workflow, fire-and-forget
+    runBookingWorkflow(finalBookingData).catch(e => {
+        console.error("Booking workflow failed in the background:", e);
+        // Optionally, you could implement a global error notification system here
+    });
+
+    setConfirmationStats(prev => ({ ...prev, viewingsBooked: prev.viewingsBooked + urlsToBook.length }));
+    setView('confirmation');
+    setBookingDialogOpen(false);
+    setSelectedProperty(null);
+    setIsBookingAll(false);
+
+    return { success: true };
   };
 
   const isCurrentStepValid = () => {
@@ -340,7 +345,8 @@ const HomeFindingAgent = () => {
    
   const isBookingFormValid = () => {
     const { email, firstName, lastName, phone, postCode, houseNumber, wantToSellHouse, hadFinancialConsultation } = bookingInfo;
-    return email && firstName && lastName && phone && postCode && houseNumber && wantToSellHouse !== null && hadFinancialConsultation !== null;
+    const postcodeRegex = /^[1-9][0-9]{3}[A-Z]{2}$/;
+    return email && firstName && lastName && phone && postcodeRegex.test(postCode) && houseNumber && wantToSellHouse !== null && hadFinancialConsultation !== null;
   };
   
   const resetSearch = () => {
@@ -367,6 +373,7 @@ const HomeFindingAgent = () => {
         <BookingConfirmation 
             stats={confirmationStats}
             onStartNewSearch={resetSearch}
+            onViewMyBookings={() => setView('results')}
         />
     );
   }
@@ -607,7 +614,7 @@ const HomeFindingAgent = () => {
                     </div>
                     <div>
                         <Label htmlFor="postCode">Postcode</Label>
-                        <Input id="postCode" value={bookingInfo.postCode} onChange={(e) => handleBookingInfoChange('postCode', e.target.value)} placeholder="1234 AB" />
+                        <Input id="postCode" value={bookingInfo.postCode} onChange={(e) => handleBookingInfoChange('postCode', e.target.value)} placeholder="1234AB" maxLength={6} />
                     </div>
                      <div>
                         <Label htmlFor="houseNumber">House Number</Label>

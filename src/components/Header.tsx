@@ -21,6 +21,9 @@ export default function Header() {
             <Link href="#how-it-works">{t('nav.how_it_works')}</Link>
           </Button>
           <Button variant="ghost" asChild>
+            <Link href="#pricing">{t('nav.pricing')}</Link>
+          </Button>
+          <Button variant="ghost" asChild>
             <Link href="#faq">{t('nav.faq')}</Link>
           </Button>
           <Button asChild>

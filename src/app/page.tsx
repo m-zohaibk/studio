@@ -2,7 +2,7 @@
 'use client';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { ArrowRight, Search, Sparkles, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
@@ -170,8 +170,195 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24">
+        <div className="container mx-auto px-4">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-headline font-bold text-primary mb-4">
+              {t('pricing.title')}
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              {t('pricing.subtitle')}
+            </p>
+
+            {/* 30 Day Money Back Guarantee Section */}
+            <div className="mt-12 max-w-4xl mx-auto">
+              <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-2xl p-8 backdrop-blur-sm shadow-lg">
+                <div className="flex flex-col md:flex-row items-center justify-between text-left gap-6">
+                  <div className="flex-1">
+                    <h4 className="text-2xl font-headline font-bold text-primary mb-4">
+                      {t('pricing.guarantee.title')}
+                    </h4>
+                    <p className="text-muted-foreground text-lg">
+                      {t('pricing.guarantee.description')}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Image
+                      src="/30days_orange.png"
+                      alt="30 Day Money Back Guarantee"
+                      width={160}
+                      height={160}
+                      className="w-32 h-32 md:w-40 md:h-40 drop-shadow-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Monthly Package */}
+              <div className="relative bg-white border-2 border-border rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-shadow">
+                {/* Title */}
+                <div className="mb-6">
+                  <div className="flex items-center mb-4">
+                    <Sparkles className="h-8 w-8 text-primary mr-3" />
+                    <h3 className="text-2xl md:text-3xl font-headline font-bold text-foreground">
+                      {t('pricing.monthly.title')}
+                    </h3>
+                  </div>
+                  <p className="text-muted-foreground">{t('pricing.monthly.description')}</p>
+                </div>
+
+                {/* Pricing */}
+                <div className="mb-8">
+                  <div className="flex items-baseline">
+                    <span className="text-5xl font-headline font-bold text-primary">
+                      {t('pricing.monthly.price')}
+                    </span>
+                    <span className="text-xl text-muted-foreground ml-2">
+                      {t('pricing.monthly.period')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="mb-8">
+                  <ul className="space-y-4">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.monitoring')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.matching')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.alerts')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.booking')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.support')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.updates')}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* CTA */}
+                <Button size="lg" className="w-full text-lg" asChild>
+                  <Link href="/search">{t('pricing.monthly.cta')}</Link>
+                </Button>
+
+                {/* Microcopy */}
+                <p className="text-sm text-muted-foreground text-center mt-4">
+                  {t('pricing.microcopy')}
+                </p>
+              </div>
+
+              {/* Yearly Package - Popular */}
+              <div className="relative bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-shadow">
+                {/* Popular Badge */}
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-primary text-primary-foreground px-6 py-2 rounded-full text-sm font-bold shadow-lg">
+                    {t('pricing.yearly.save')}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="mb-6">
+                  <div className="flex items-center mb-4">
+                    <Sparkles className="h-8 w-8 text-primary mr-3" />
+                    <h3 className="text-2xl md:text-3xl font-headline font-bold text-foreground">
+                      {t('pricing.yearly.title')}
+                    </h3>
+                  </div>
+                  <p className="text-muted-foreground">{t('pricing.yearly.description')}</p>
+                </div>
+
+                {/* Pricing */}
+                <div className="mb-8">
+                  <div className="flex items-baseline">
+                    <span className="text-5xl font-headline font-bold text-primary">
+                      {t('pricing.yearly.price')}
+                    </span>
+                    <span className="text-xl text-muted-foreground ml-2">
+                      {t('pricing.yearly.period')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {t('pricing.yearly.monthly_equivalent')}
+                  </p>
+                </div>
+
+                {/* Features */}
+                <div className="mb-8">
+                  <ul className="space-y-4">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.monitoring')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.matching')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.alerts')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.booking')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.support')}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{t('pricing.features.updates')}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* CTA */}
+                <Button size="lg" className="w-full text-lg" asChild>
+                  <Link href="/search">{t('pricing.yearly.cta')}</Link>
+                </Button>
+
+                {/* Microcopy */}
+                <p className="text-sm text-muted-foreground text-center mt-4">
+                  {t('pricing.microcopy')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
-      <section id="faq" className="py-24">
+      <section id="faq" className="py-24 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-4xl font-headline font-bold mb-4">{t('faq.title')}</h2>

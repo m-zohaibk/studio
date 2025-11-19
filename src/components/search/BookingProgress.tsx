@@ -112,7 +112,7 @@ export default function BookingProgress({ properties, onComplete }: BookingProgr
           return prevStep;
         }
       });
-    }, 800); // Time per step
+    }, 1500); // Time per step
 
     return () => clearInterval(stepInterval);
   }, [properties.length, onComplete]);

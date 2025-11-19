@@ -155,6 +155,13 @@ const HomeFindingAgent = () => {
         { value: 'from_2021', label: '2021 onwards' }
       ]
     },
+    {
+        id: 'user_priority',
+        question: "What is most important to you?",
+        icon: Target,
+        type: 'textarea',
+        placeholder: 'e.g., a large garden, close to the city center, a quiet street...'
+    }
   ];
 
   const currentQuestion = searchQuestions[step];
@@ -302,7 +309,7 @@ const HomeFindingAgent = () => {
     const fundaUrl = buildFundaUrl();
 
     try {
-      const { jobExecutionId } = await initiateOpusJob(fundaUrl, userPriority);
+      const { jobExecutionId } = await initiateOpusJob(fundaUrl, userPriority, searchParams);
       setPollingStatus('Job initiated, waiting for completion...');
       pollJob(jobExecutionId); // Start polling
     } catch (e: any) {
@@ -535,14 +542,6 @@ const HomeFindingAgent = () => {
                       >
                         New Search
                       </Button>
-                      <a 
-                          href={buildFundaUrl()}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2"
-                      >
-                          <ExternalLink className="mr-2 h-4 w-4" /> View on Funda.nl
-                      </a>
                     </div>
                   </div>
                   <div className="max-h-[calc(100vh-400px)] overflow-y-auto mb-6 pr-2">

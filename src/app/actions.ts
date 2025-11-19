@@ -2,21 +2,28 @@
 "use server";
 
 // --- Opus Workflow Configuration ---
-const CRAWLER_WORKFLOW_ID = "P24vpwAkwbJWaZUL";
+const CRAWLER_WORKFLOW_ID = "RblK0hTljCNVKHhb";
 const BOOKING_WORKFLOW_ID = "UJ855z3jUzjA6RSn";
 const OPUS_SERVICE_KEY =
   process.env.OPUS_SERVICE_KEY ||
-  "_5bafbc4e23152c78896b8dcd50412afc30d45f876fbd9e026b8f00dbd31f900819f8d87ffcf813c26d69336574776936";
+  "_725a31538bb686e434d64fbf5545b0a9cccfd0dc1c7ca631f71c4c85d2e866a1584dc12ac6ff883b6d6933366a646969";
 
 const OPUS_BASE_URL = "https://operator.opus.com";
 
 
-export async function initiateOpusJob(searchParams: any) {
+export async function initiateOpusJob(fundaUrl: string, userPriority: string, searchParams: any) {
   if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
     throw new Error(
       "Opus crawler workflow ID or service key is not configured."
     );
   }
+
+  // Determine a safe title for the job
+  const jobTitle = `Property Search - ${
+    searchParams.selected_area && searchParams.selected_area.length > 0
+      ? searchParams.selected_area[0]
+      : "Unknown Area"
+  }`;
 
   // Step 1: Initiate Job
   const initiateResponse = await fetch(`${OPUS_BASE_URL}/job/initiate`, {
@@ -27,14 +34,11 @@ export async function initiateOpusJob(searchParams: any) {
     },
     body: JSON.stringify({
       workflowId: CRAWLER_WORKFLOW_ID,
-      title: `Property Search - ${
-        searchParams.selected_area[0] || "Unknown Area"
-      }`,
-      description: `Searching for properties with the following criteria: ${JSON.stringify(
-        searchParams
-      )}`,
+      title: jobTitle,
+      description: `Searching for properties with URL: ${fundaUrl} and priority: ${userPriority}`,
     }),
   });
+
 
   if (!initiateResponse.ok) {
     throw new Error(
@@ -44,8 +48,6 @@ export async function initiateOpusJob(searchParams: any) {
 
   const { jobExecutionId } = await initiateResponse.json();
   console.log(`Opus job initiated with ID: ${jobExecutionId}`);
-
-  console.log("Search params: ", searchParams);
 
   // Step 2: Execute Job with the correct payload structure
   const executeResponse = await fetch(`${OPUS_BASE_URL}/job/execute`, {
@@ -57,10 +59,14 @@ export async function initiateOpusJob(searchParams: any) {
     body: JSON.stringify({
       jobExecutionId: jobExecutionId,
       jobPayloadSchemaInstance: {
-        city_list: {
-          value: searchParams,
-          type: "object",
+        fundaurl: {
+          value: fundaUrl,
+          type: "str",
         },
+        user_priority: {
+            value: userPriority,
+            type: "str"
+        }
       },
     }),
   });
@@ -128,43 +134,32 @@ export async function getOpusJobResults(jobExecutionId: string) {
 
   if (opusResults && opusResults.jobResultsPayloadSchema) {
     const schema = opusResults.jobResultsPayloadSchema;
-    const resultKey = Object.keys(schema)[0];
-
-    if (
-      resultKey &&
-      schema[resultKey] &&
-      typeof schema[resultKey].value === "string"
-    ) {
-      try {
-        const parsedValue = JSON.parse(schema[resultKey].value);
-        const properties = parsedValue.properties;
+    
+    // Look for the specific 'top_three_listings' key
+    const resultKey = 'top_three_listings';
+    
+    if (schema[resultKey] && schema[resultKey].value) {
+        const properties = schema[resultKey].value;
 
         if (properties && Array.isArray(properties)) {
-          console.log(`Found ${properties.length} properties from Opus.`);
-          return properties.map((prop: any) => ({
-            id: prop.url || Math.random(),
-            title: prop.address,
-            address: prop.address,
-            price: prop.price,
-            imageUrl:
-              prop.image_url ||
-              `https://picsum.photos/seed/${Math.random()}/600/400`,
-            features: [
-              prop.rooms ? `${prop.rooms} rooms` : null,
-              prop.size ? `${prop.size}` : null,
-              prop.energy_label ? `Label: ${prop.energy_label}` : null,
-            ].filter(Boolean),
-            url: prop.url,
-          }));
+            console.log(`Found ${properties.length} properties from Opus.`);
+            return properties.map((prop: any) => ({
+                id: prop.url || Math.random(),
+                title: prop.address,
+                address: prop.address,
+                price: prop.price,
+                imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+                features: [
+                    prop.rooms ? `${prop.rooms} rooms` : null,
+                    prop.size ? `${prop.size}` : null,
+                    prop.energy_label ? `Label: ${prop.energy_label}` : null,
+                ].filter(Boolean),
+                url: prop.url,
+            }));
         }
-      } catch (e) {
-        console.error("Failed to parse properties from Opus result value:", e);
-        throw new Error(
-          "Could not parse property data from the search result."
-        );
-      }
     }
   }
+
 
   console.warn(
     "Opus results received, but a valid property array was not found in the expected structure.",

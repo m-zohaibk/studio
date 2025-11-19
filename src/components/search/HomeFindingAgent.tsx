@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { initiateOpusJob, checkOpusJobStatus, getOpusJobResults, runBookingWorkflow } from '@/app/actions';
-import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search, BookMarked } from 'lucide-react';
+import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search, BookMarked, FileScan, Target } from 'lucide-react';
 import PropertyCard from './PropertyCard';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import BookingDialog from './BookingDialog'; // Import the new component
 import { useToast } from "@/hooks/use-toast"
 import BookingConfirmation from './BookingConfirmation';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 
 type View = 'questionnaire' | 'booking' | 'results' | 'confirmation';
 
@@ -26,6 +27,7 @@ const HomeFindingAgent = () => {
     energy_label: [],
     construction_period: []
   });
+  const [userPriority, setUserPriority] = useState('');
   const [bookingInfo, setBookingInfo] = useState({
     email: '',
     firstName: '',
@@ -51,6 +53,12 @@ const HomeFindingAgent = () => {
     viewingsBooked: 0,
   });
   const [isBookingAll, setIsBookingAll] = useState(false);
+
+  // New states for the loading screen
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [scannedProperties, setScannedProperties] = useState(0);
+  const [bestMatches, setBestMatches] = useState(0);
+  
 
   const searchQuestions = [
     {
@@ -144,6 +152,13 @@ const HomeFindingAgent = () => {
         { value: 'from_2021', label: '2021 onwards' }
       ]
     },
+    {
+      id: 'user_priority',
+      question: "What are your top priorities?",
+      icon: User,
+      type: 'textarea',
+      placeholder: 'e.g., a quiet street with a garden, must be close to a train station...'
+    }
   ];
 
   const currentQuestion = searchQuestions[step];
@@ -151,6 +166,11 @@ const HomeFindingAgent = () => {
   const handleSelection = (value: any) => {
     const questionId = currentQuestion.id;
   
+    if (questionId === 'user_priority') {
+      setUserPriority(value);
+      return;
+    }
+
     if (currentQuestion.type === 'text_input') {
       if (questionId === 'selected_area') {
          const locations = value.split(',').map((loc: string) => loc.trim().toLowerCase()).filter(Boolean);
@@ -182,6 +202,66 @@ const HomeFindingAgent = () => {
     }
   };
 
+  const buildFundaUrl = () => {
+    const baseUrl = `https://www.funda.nl/en/zoeken/koop?`;
+    const queryParts: string[] = [];
+  
+    if (searchParams.selected_area && searchParams.selected_area.length > 0) {
+      queryParts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
+    }
+    if (searchParams.price) {
+      queryParts.push(`price="${searchParams.price}"`);
+    }
+    if (searchParams.availability && searchParams.availability.length > 0) {
+       queryParts.push(`availability=${JSON.stringify(searchParams.availability)}`);
+    }
+    if (searchParams.floor_area) {
+        queryParts.push(`floor_area="${searchParams.floor_area}"`);
+    }
+    if (searchParams.bedrooms) {
+        queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
+    }
+    if (searchParams.energy_label && searchParams.energy_label.length > 0) {
+        queryParts.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
+    }
+    if (searchParams.construction_period && searchParams.construction_period.length > 0) {
+        queryParts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
+    }
+    
+    return baseUrl + queryParts.join('&');
+  };
+
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout | null = null;
+    if (loading) {
+      setLoadingProgress(0);
+      setScannedProperties(0);
+      setBestMatches(0);
+      
+      progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 95) {
+             if(progressInterval) clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 1;
+        });
+
+        setScannedProperties(prev => prev + Math.floor(Math.random() * 5) + 1);
+
+      }, 400);
+    } else {
+        setLoadingProgress(100);
+    }
+
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    };
+  }, [loading]);
+
+
   const pollJob = async (jobExecutionId: string, attempts = 0) => {
     const maxAttempts = 90;
     if (attempts >= maxAttempts) {
@@ -199,7 +279,8 @@ const HomeFindingAgent = () => {
             setPollingStatus('Fetching results...');
             const results = await getOpusJobResults(jobExecutionId);
             setProperties(results);
-            setConfirmationStats(prev => ({ ...prev, propertiesScanned: Math.floor(Math.random() * 50) + 20, perfectMatches: results.length }));
+            setBestMatches(results.length);
+            setConfirmationStats(prev => ({ ...prev, propertiesScanned: scannedProperties, perfectMatches: results.length }));
             setLoading(false);
         } else if (status === 'failed' || status === 'FAILED') {
             setError("Search failed. Please check your criteria and try again.");
@@ -222,16 +303,10 @@ const HomeFindingAgent = () => {
     setPollingStatus('Initializing search...');
     setView('results');
 
-    const apiSearchParams = JSON.parse(JSON.stringify(searchParams));
-
-    searchQuestions.forEach(q => {
-        if ((q.type === 'multiselect' || q.type === 'multiselect_checkbox') && !apiSearchParams[q.id]) {
-            apiSearchParams[q.id] = [];
-        }
-    });
+    const fundaUrl = buildFundaUrl();
 
     try {
-      const { jobExecutionId } = await initiateOpusJob(apiSearchParams);
+      const { jobExecutionId } = await initiateOpusJob(fundaUrl, userPriority);
       setPollingStatus('Job initiated, waiting for completion...');
       pollJob(jobExecutionId); // Start polling
     } catch (e: any) {
@@ -334,10 +409,11 @@ const HomeFindingAgent = () => {
   };
 
   const isCurrentStepValid = () => {
-    const questionId = currentQuestion.id;
-    const value = searchParams[questionId];
+    if (currentQuestion.id === 'user_priority') return true;
 
-    if (questionId === 'price') return true; 
+    const value = searchParams[currentQuestion.id];
+
+    if (currentQuestion.id === 'price') return true; 
     if (Array.isArray(value)) return value.length > 0;
     
     return !!value;
@@ -360,6 +436,7 @@ const HomeFindingAgent = () => {
         selected_area: [], price: '0-1000000', availability: [], floor_area: '',
         bedrooms: '', energy_label: [], construction_period: []
       });
+      setUserPriority('');
         setBookingInfo({
         email: '', firstName: '', lastName: '', phone: '', postCode: '',
         houseNumber: '', addition: '', wantToSellHouse: null, hadFinancialConsultation: null,
@@ -380,7 +457,7 @@ const HomeFindingAgent = () => {
 
   if (view === 'results') {
     return (
-      <div className="min-h-screen bg-background p-6 w-full">
+      <div className="min-h-screen bg-background p-6 w-full flex items-center justify-center">
         <BookingDialog
           isOpen={isBookingDialogOpen}
           onClose={() => {
@@ -393,39 +470,63 @@ const HomeFindingAgent = () => {
           isBookingAll={isBookingAll}
           propertyCount={properties.length}
         />
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-            <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  Search Results
-                </h2>
-                <p className="text-gray-600">Based on your search criteria</p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={resetSearch}
-                  variant="outline"
-                >
-                  New Search
-                </Button>
-              </div>
-            </div>
+        <div className="max-w-7xl mx-auto w-full">
             {loading ? (
-                 <div className="flex flex-col items-center justify-center p-12">
-                    <Loader className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">{pollingStatus || 'Searching...'}</h2>
-                    <p className="text-gray-600">Please wait while we find your perfect home</p>
+                 <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg mx-auto">
+                    <div className="flex flex-col items-center justify-center text-center">
+                        <div className="bg-primary/10 rounded-full p-4 mb-6">
+                          <Search className="w-10 h-10 text-primary" />
+                        </div>
+                        <h2 className="text-3xl font-bold text-gray-800 mb-2">AI is Working For You</h2>
+                        <p className="text-gray-600 mb-8">Analyzing thousands of properties to find your perfect match</p>
+                        
+                        <div className="w-full text-left mb-6">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                  <FileScan className="w-4 h-4"/> Scanning available properties...
+                                </span>
+                                <span className="text-sm font-bold text-primary">{loadingProgress}%</span>
+                            </div>
+                            <Progress value={loadingProgress} className="h-2" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 w-full">
+                            <div className="bg-primary/5 rounded-lg p-4 text-center">
+                                <p className="text-3xl font-bold text-primary">{scannedProperties}</p>
+                                <p className="text-sm text-muted-foreground">Properties Scanned</p>
+                            </div>
+                            <div className="bg-primary/5 rounded-lg p-4 text-center">
+                                <p className="text-3xl font-bold text-primary">{bestMatches}</p>
+                                <p className="text-sm text-muted-foreground">Best Matches</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ) : error ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-center">
-                <p className="text-yellow-800 font-semibold">{error}</p>
+              <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <p className="text-destructive font-semibold mb-4">{error}</p>
                  <Button onClick={resetSearch} className="mt-4">
                     Try Again
                 </Button>
               </div>
             ) : properties.length > 0 ? (
-                <>
+                <div className="bg-white rounded-2xl shadow-xl p-8">
+                  <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                        Search Results
+                      </h2>
+                      <p className="text-gray-600">Here are the top matches we found for you</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={resetSearch}
+                        variant="outline"
+                      >
+                        New Search
+                      </Button>
+                    </div>
+                  </div>
                   <div className="max-h-[calc(100vh-400px)] overflow-y-auto mb-6 pr-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
@@ -439,7 +540,7 @@ const HomeFindingAgent = () => {
                   >
                     <BookMarked className="mr-2 w-6 h-6" /> Book All {properties.length} Viewings Automatically
                   </Button>
-                </>
+                </div>
             ) : (
                 <div className="bg-white rounded-xl shadow-lg p-12 text-center">
                     <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -447,9 +548,11 @@ const HomeFindingAgent = () => {
                     <p className="text-gray-600 mb-6">
                         We couldn't find any properties matching your criteria. Try a broader search.
                     </p>
+                     <Button onClick={resetSearch}>
+                        Start New Search
+                    </Button>
                 </div>
             )}
-          </div>
         </div>
       </div>
     );
@@ -497,7 +600,15 @@ const HomeFindingAgent = () => {
               </div>
 
               <div className="space-y-3">
-                {currentQuestion.type === 'text_input' ? (
+                {currentQuestion.type === 'textarea' ? (
+                   <textarea
+                    value={userPriority}
+                    onChange={(e) => handleSelection(e.target.value)}
+                    placeholder={currentQuestion.placeholder}
+                    rows={4}
+                    className="w-full p-4 rounded-xl border-2 border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium transition-all"
+                  />
+                ) : currentQuestion.type === 'text_input' ? (
                   <input
                     type='text'
                     value={(currentQuestion.id === 'selected_area' ? searchParams.selected_area?.join(', ') : searchParams[currentQuestion.id]) || ''}
@@ -675,3 +786,5 @@ const HomeFindingAgent = () => {
 };
 
 export default HomeFindingAgent;
+
+    

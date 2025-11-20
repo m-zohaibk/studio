@@ -139,16 +139,14 @@ export async function getOpusJobResults(jobExecutionId: string) {
         if (properties && Array.isArray(properties)) {
             console.log(`Found ${properties.length} properties from Opus.`);
             return properties.map((prop: any) => ({
-                id: prop.url || Math.random(),
+                id: prop.url || Math.random().toString(),
                 title: prop.address,
                 address: prop.address,
                 price: prop.price,
                 imageUrl: prop.image_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
-                features: [
-                    prop.rooms ? `${prop.rooms} rooms` : null,
-                    prop.size ? `${prop.size}` : null,
-                    prop.energy_label ? `Label: ${prop.energy_label}` : null,
-                ].filter(Boolean),
+                rooms: prop.rooms,
+                size: prop.size,
+                energyLabel: prop.energy_label,
                 url: prop.url,
             }));
         }

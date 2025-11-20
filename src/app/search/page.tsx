@@ -2,12 +2,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { initiateOpusJob, checkOpusJobStatus, getOpusJobResults, runBookingWorkflow } from '@/app/actions';
-import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search, BookMarked, FileScan, Target } from 'lucide-react';
+import { Home, MapPin, DollarSign, Calendar, Bed, Maximize, Zap, CheckCircle, ExternalLink, Loader, Mail, User, Phone, Briefcase, Repeat, Plus, Mailbox, Search, BookMarked, FileScan, Target, Building } from 'lucide-react';
 import PropertyCard from '@/components/search/PropertyCard';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import BookingDialog from '@/components/search/BookingDialog'; // Import the new component
+import BookingDialog from '@/components/search/BookingDialog';
 import { useToast } from "@/hooks/use-toast"
 import BookingConfirmation from '@/components/search/BookingConfirmation';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,97 @@ import { Progress } from '@/components/ui/progress';
 import BookingProgress from '@/components/search/BookingProgress';
 
 type View = 'questionnaire' | 'booking' | 'results' | 'confirmation' | 'booking-progress';
+
+const SearchQuestion = ({ question, value, onSelection, priceRange, onPriceChange }: any) => {
+    return (
+        <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                    <question.icon className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground">{question.question}</h3>
+            </div>
+            <div className="space-y-3">
+                {question.type === 'textarea' ? (
+                   <textarea
+                    value={value}
+                    onChange={(e) => onSelection(question.id, e.target.value)}
+                    placeholder={question.placeholder}
+                    rows={4}
+                    className="w-full p-4 rounded-xl border-2 border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium transition-all"
+                  />
+                ) : question.type === 'text_input' ? (
+                  <input
+                    type='text'
+                    value={(question.id === 'selected_area' ? value?.join(', ') : value) || ''}
+                    onChange={(e) => onSelection(question.id, e.target.value)}
+                    placeholder={question.placeholder}
+                    className="w-full p-4 rounded-xl border-2 border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium transition-all"
+                    autoFocus
+                  />
+                ) : question.type === 'slider' ? (
+                    <div className="py-4 px-2">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="font-semibold text-lg text-foreground">€{priceRange[0].toLocaleString()}</span>
+                            <span className="font-semibold text-lg text-foreground">€{priceRange[1].toLocaleString()}</span>
+                        </div>
+                        <Slider
+                            value={priceRange}
+                            min={question.min}
+                            max={question.max}
+                            step={question.step}
+                            onValueChange={onPriceChange}
+                            className="w-full"
+                        />
+                    </div>
+                ) : question.type === 'multiselect_checkbox' ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {question.options.map((option: {value: string, label: string}) => {
+                      const isSelected = value?.includes(option.value);
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => onSelection(question.id, option.value, true)}
+                          className={`p-3 rounded-lg border-2 text-center text-sm font-semibold transition-all ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-input hover:border-primary/50 hover:bg-accent text-foreground'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : ( // Covers 'select' and 'multiselect'
+                  question.options.map((option: {value: string, label: string}) => {
+                    const isSelected = question.type === 'multiselect'
+                      ? value?.includes(option.value)
+                      : value === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => onSelection(question.id, option.value, question.type === 'multiselect')}
+                        className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
+                          isSelected
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-input hover:border-primary/50 hover:bg-accent text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option.label}</span>
+                          {isSelected && <CheckCircle className="w-5 h-5 text-primary" />}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+        </div>
+    )
+}
+
 
 const HomeFindingAgent = () => {
   const [step, setStep] = useState(0);
@@ -62,139 +153,128 @@ const HomeFindingAgent = () => {
   const [scannedProperties, setScannedProperties] = useState(0);
   const [bestMatches, setBestMatches] = useState(0);
   
-
-  const searchQuestions = [
-    {
-      id: 'selected_area',
-      question: "Which area are you interested in?",
-      icon: MapPin,
-      type: 'text_input',
-      placeholder: 'e.g., amsterdam, rotterdam, utrecht'
-    },
-    {
-      id: 'price',
-      question: "What's your budget range?",
-      icon: DollarSign,
-      type: 'slider',
-      min: 0,
-      max: 2000000,
-      step: 50000,
-    },
-    {
-      id: 'availability',
-      question: "Availability?",
-      icon: Calendar,
-      type: 'multiselect',
-      options: [
-        { value: 'available', label: 'Available now' },
-        { value: 'negotiations', label: 'Under negotiation' }
-      ]
-    },
-    {
-      id: 'bedrooms',
-      question: "How many bedrooms do you need?",
-      icon: Bed,
-      type: 'select',
-      options: [
-        { value: '1-', label: '1 or more' },
-        { value: '2-', label: '2 or more' },
-        { value: '3-', label: '3 or more' },
-        { value: '4-', label: '4 or more' },
-        { value: '5-', label: '5 or more' }
-      ]
-    },
-    {
-      id: 'floor_area',
-      question: "What's your minimum floor area (m²)?",
-      icon: Maximize,
-      type: 'select',
-      options: [
-        { value: '50-', label: '50 m² or more' },
-        { value: '80-', label: '80 m² or more' },
-        { value: '100-', label: '100 m² or more' },
-        { value: '150-', label: '150 m² or more' },
-        { value: '200-', label: '200 m² or more' }
-      ]
-    },
-    {
-      id: 'energy_label',
-      question: "What energy efficiency rating do you prefer?",
-      icon: Zap,
-      type: 'multiselect_checkbox',
-      options: [
-        { value: 'A%2B%2B%2B%2B%2B', label: 'A+++++' },
-        { value: 'A%2B%2B%2B%2B', label: 'A++++' },
-        { value: 'A%2B%2B%2B', label: 'A+++' },
-        { value: 'A%2B%2B', label: 'A++' },
-        { value: 'A%2B', label: 'A+' },
-        { value: 'A', label: 'A' },
-        { value: 'B', label: 'B' },
-        { value: 'C', label: 'C' },
-        { value: 'D', label: 'D' },
-        { value: 'E', label: 'E' },
-        { value: 'F', label: 'F' },
-        { value: 'G', label: 'G' }
-      ]
-    },
-    {
-      id: 'construction_period',
-      question: "What construction period do you prefer?",
-      icon: Home,
-      type: 'multiselect',
-      options: [
-        { value: 'before_1906', label: 'Before 1906' },
-        { value: 'from_1906_to_1930', label: '1906 - 1930' },
-        { value: 'from_1931_to_1944', label: '1931 - 1944' },
-        { value: 'from_1945_to_1959', label: '1945 - 1959' },
-        { value: 'from_1960_to_1970', label: '1960 - 1970' },
-        { value: 'from_1971_to_1980', label: '1971 - 1980' },
-        { value: 'from_1981_to_1990', label: '1981 - 1990' },
-        { value: 'from_1991_to_2000', label: '1991 - 2000' },
-        { value: 'from_2001_to_2010', label: '2001 - 2010' },
-        { value: 'from_2011_to_2020', label: '2011 - 2020' },
-        { value: 'from_2021', label: '2021 onwards' }
-      ]
-    },
-    {
-        id: 'user_priority',
-        question: "What is most important to you?",
-        icon: Target,
-        type: 'textarea',
-        placeholder: 'e.g., a large garden, close to the city center, a quiet street...'
-    }
+  const searchQuestionGroups = [
+    [
+        {
+          id: 'selected_area',
+          question: "Which area(s) are you interested in?",
+          icon: MapPin,
+          type: 'text_input',
+          placeholder: 'e.g., amsterdam, rotterdam, utrecht'
+        },
+        {
+          id: 'price',
+          question: "What's your budget range?",
+          icon: DollarSign,
+          type: 'slider',
+          min: 0,
+          max: 2000000,
+          step: 50000,
+        },
+    ],
+    [
+        {
+          id: 'bedrooms',
+          question: "How many bedrooms do you need?",
+          icon: Bed,
+          type: 'select',
+          options: [
+            { value: '1-', label: '1 or more' },
+            { value: '2-', label: '2 or more' },
+            { value: '3-', label: '3 or more' },
+            { value: '4-', label: '4 or more' },
+            { value: '5-', label: '5 or more' }
+          ]
+        },
+        {
+          id: 'floor_area',
+          question: "What's your minimum floor area (m²)?",
+          icon: Maximize,
+          type: 'select',
+          options: [
+            { value: '50-', label: '50 m² or more' },
+            { value: '80-', label: '80 m² or more' },
+            { value: '100-', label: '100 m² or more' },
+            { value: '150-', label: '150 m² or more' },
+            { value: '200-', label: '200 m² or more' }
+          ]
+        },
+    ],
+    [
+        {
+            id: 'availability',
+            question: "Availability?",
+            icon: Calendar,
+            type: 'multiselect',
+            options: [
+              { value: 'available', label: 'Available now' },
+              { value: 'negotiations', label: 'Under negotiation' }
+            ]
+        },
+        {
+            id: 'energy_label',
+            question: "Preferred energy efficiency rating?",
+            icon: Zap,
+            type: 'multiselect_checkbox',
+            options: [
+              { value: 'A%2B%2B%2B%2B%2B', label: 'A+++++' }, { value: 'A%2B%2B%2B%2B', label: 'A++++' }, { value: 'A%2B%2B%2B', label: 'A+++' },
+              { value: 'A%2B%2B', label: 'A++' }, { value: 'A%2B', label: 'A+' }, { value: 'A', label: 'A' }, { value: 'B', label: 'B' },
+              { value: 'C', label: 'C' }, { value: 'D', label: 'D' }, { value: 'E', label: 'E' }, { value: 'F', label: 'F' }, { value: 'G', label: 'G' }
+            ]
+        },
+        {
+            id: 'construction_period',
+            question: "Preferred construction period?",
+            icon: Building,
+            type: 'multiselect',
+            options: [
+              { value: 'before_1906', label: 'Before 1906' }, { value: 'from_1906_to_1930', label: '1906 - 1930' },
+              { value: 'from_1931_to_1944', label: '1931 - 1944' }, { value: 'from_1945_to_1959', label: '1945 - 1959' },
+              { value: 'from_1960_to_1970', label: '1960 - 1970' }, { value: 'from_1971_to_1980', label: '1971 - 1980' },
+              { value: 'from_1981_to_1990', label: '1981 - 1990' }, { value: 'from_1991_to_2000', label: '1991 - 2000' },
+              { value: 'from_2001_to_2010', label: '2001 - 2010' }, { value: 'from_2011_to_2020', label: '2011 - 2020' },
+              { value: 'from_2021', label: '2021 onwards' }
+            ]
+        },
+    ],
+    [
+        {
+            id: 'user_priority',
+            question: "What is most important to you?",
+            icon: Target,
+            type: 'textarea',
+            placeholder: 'e.g., a large garden, close to the city center, a quiet street...'
+        }
+    ]
   ];
 
-  const currentQuestion = searchQuestions[step];
-
-  const handleSelection = (value: any) => {
-    const questionId = currentQuestion.id;
+  const currentGroup = searchQuestionGroups[step];
   
-    if (questionId === 'user_priority') {
-      setUserPriority(value);
-      return;
-    }
-
-    if (currentQuestion.type === 'text_input') {
-      if (questionId === 'selected_area') {
-         const locations = value.split(',').map((loc: string) => loc.trim().toLowerCase()).filter(Boolean);
-         setSearchParams({ ...searchParams, [questionId]: locations });
-      } else {
-         setSearchParams({ ...searchParams, [questionId]: value });
+  const handleSelection = (questionId: string, value: any, isMultiselect = false) => {
+      if (questionId === 'user_priority') {
+          setUserPriority(value);
+          return;
       }
-    } else if ((currentQuestion.type === 'multiselect' || currentQuestion.type === 'multiselect_checkbox')) {
-      const currentValues = searchParams[questionId] || [];
-      const newValues = currentValues.includes(value)
-        ? currentValues.filter((v: string) => v !== value)
-        : [...currentValues, value];
-      setSearchParams({ ...searchParams, [questionId]: newValues });
-    } else if (currentQuestion.type === 'slider' && Array.isArray(value) && typeof value[0] === 'number') {
-      setPriceRange(value as number[]);
-      const priceString = `${value[0]}-${value[1]}`;
-      setSearchParams({ ...searchParams, [questionId]: priceString });
-    } else {
-      setSearchParams({ ...searchParams, [questionId]: value });
-    }
+      
+      if (questionId === 'selected_area') {
+        const locations = value.split(',').map((loc: string) => loc.trim().toLowerCase()).filter(Boolean);
+        setSearchParams({ ...searchParams, [questionId]: locations });
+      } else if (isMultiselect) {
+          const currentValues = searchParams[questionId] || [];
+          const newValues = currentValues.includes(value)
+            ? currentValues.filter((v: string) => v !== value)
+            : [...currentValues, value];
+          setSearchParams({ ...searchParams, [questionId]: newValues });
+      } else {
+          setSearchParams({ ...searchParams, [questionId]: value });
+      }
   };
+
+  const handlePriceChange = (value: number[]) => {
+      setPriceRange(value);
+      const priceString = `${value[0]}-${value[1]}`;
+      setSearchParams({ ...searchParams, price: priceString });
+  }
 
   const handleBookingInfoChange = (field: keyof typeof bookingInfo, value: string | boolean | null) => {
     if (field === 'postCode' && typeof value === 'string') {
@@ -321,7 +401,7 @@ const HomeFindingAgent = () => {
 
 
   const handleNext = () => {
-    if (step < searchQuestions.length - 1) {
+    if (step < searchQuestionGroups.length - 1) {
       setStep(step + 1);
     } else {
       setView('booking');
@@ -417,14 +497,12 @@ const HomeFindingAgent = () => {
   };
 
   const isCurrentStepValid = () => {
-    if (currentQuestion.id === 'user_priority') return true;
-
-    const value = searchParams[currentQuestion.id];
-
-    if (currentQuestion.id === 'price') return true; 
-    if (Array.isArray(value)) return value.length > 0;
-    
-    return !!value;
+    return currentGroup.every(q => {
+        if (q.id === 'user_priority' || q.id === 'price') return true;
+        const value = q.id === 'user_priority' ? userPriority : searchParams[q.id];
+        if (Array.isArray(value)) return value.length > 0;
+        return !!value;
+    })
   };
    
   const isBookingFormValid = () => {
@@ -569,10 +647,8 @@ const HomeFindingAgent = () => {
                       </Button>
                     </div>
                   </div>
-                  <div className="mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                      {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
                   </div>
                   <Button
                     onClick={openBookAllDialog}
@@ -600,12 +676,13 @@ const HomeFindingAgent = () => {
     );
   }
 
+  const totalSteps = searchQuestionGroups.length + 1; // +1 for booking info
   const progress = view === 'questionnaire' 
-    ? ((step + 1) / (searchQuestions.length + 1)) * 100
+    ? ((step + 1) / totalSteps) * 100
     : 100;
   
   const progressText = view === 'questionnaire'
-    ? `Question ${step + 1} of ${searchQuestions.length}`
+    ? `Step ${step + 1} of ${searchQuestionGroups.length}`
     : 'Final Step: Your Information';
 
 
@@ -639,91 +716,16 @@ const HomeFindingAgent = () => {
         {view === 'questionnaire' && (
           <>
             <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="bg-primary p-3 rounded-xl">
-                  <currentQuestion.icon className="w-8 h-8 text-primary-foreground" />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground">
-                  {currentQuestion.question}
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                {currentQuestion.type === 'textarea' ? (
-                   <textarea
-                    value={userPriority}
-                    onChange={(e) => handleSelection(e.target.value)}
-                    placeholder={currentQuestion.placeholder}
-                    rows={4}
-                    className="w-full p-4 rounded-xl border-2 border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium transition-all"
-                  />
-                ) : currentQuestion.type === 'text_input' ? (
-                  <input
-                    type='text'
-                    value={(currentQuestion.id === 'selected_area' ? searchParams.selected_area?.join(', ') : searchParams[currentQuestion.id]) || ''}
-                    onChange={(e) => handleSelection(e.target.value)}
-                    placeholder={currentQuestion.placeholder}
-                    className="w-full p-4 rounded-xl border-2 border-input focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium transition-all"
-                  />
-                ) : currentQuestion.type === 'slider' ? (
-                    <div className="py-4">
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="font-semibold text-lg text-foreground">€{priceRange[0].toLocaleString()}</span>
-                            <span className="font-semibold text-lg text-foreground">€{priceRange[1].toLocaleString()}</span>
-                        </div>
-                        <Slider
-                            value={priceRange}
-                            min={currentQuestion.min}
-                            max={currentQuestion.max}
-                            step={currentQuestion.step}
-                            onValueChange={(value) => handleSelection(value)}
-                            className="w-full"
-                        />
-                    </div>
-                ) : currentQuestion.type === 'multiselect_checkbox' ? (
-                  <div className="grid grid-cols-4 gap-2">
-                    {currentQuestion.options.map((option: {value: string, label: string}) => {
-                      const isSelected = searchParams[currentQuestion.id]?.includes(option.value);
-                      return (
-                        <button
-                          key={option.value}
-                          onClick={() => handleSelection(option.value)}
-                          className={`p-2 rounded-lg border-2 text-center text-xs font-semibold transition-all ${
-                            isSelected
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-input hover:border-primary/50 hover:bg-accent text-foreground'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : ( // Covers 'select' and 'multiselect'
-                  currentQuestion.options.map((option: {value: string, label: string}) => {
-                    const isSelected = currentQuestion.type === 'multiselect'
-                      ? searchParams[currentQuestion.id]?.includes(option.value)
-                      : searchParams[currentQuestion.id] === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() => handleSelection(option.value)}
-                        className={`w-full p-4 rounded-xl border-2 transition-all text-left font-medium ${
-                          isSelected
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-input hover:border-primary/50 hover:bg-accent text-foreground'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{option.label}</span>
-                          {isSelected && <CheckCircle className="w-5 h-5 text-primary" />}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              {currentGroup.map(q => (
+                <SearchQuestion 
+                    key={q.id}
+                    question={q}
+                    value={q.id === 'user_priority' ? userPriority : searchParams[q.id]}
+                    onSelection={handleSelection}
+                    priceRange={priceRange}
+                    onPriceChange={handlePriceChange}
+                />
+              ))}
             </div>
 
             <div className="flex gap-4">
@@ -744,7 +746,7 @@ const HomeFindingAgent = () => {
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {step === searchQuestions.length - 1 ? 'Next' : 'Next'}
+                {step === searchQuestionGroups.length - 1 ? 'Next' : 'Next'}
               </button>
             </div>
           </>
@@ -841,5 +843,3 @@ export default function SearchPage() {
         </main>
     )
 }
-
-    

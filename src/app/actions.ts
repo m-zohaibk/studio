@@ -5,13 +5,12 @@
 const CRAWLER_WORKFLOW_ID = "RblK0hTljCNVKHhb";
 const BOOKING_WORKFLOW_ID = "UJ855z3jUzjA6RSn";
 const OPUS_SERVICE_KEY =
-  process.env.OPUS_SERVICE_KEY ||
-  "_725a31538bb686e434d64fbf5545b0a9cccfd0dc1c7ca631f71c4c85d2e866a1584dc12ac6ff883b6d6933366a646969";
+  "_5bafbc4e23152c78896b8dcd50412afc30d45f876fbd9e026b8f00dbd31f900819f8d87ffcf813c26d69336574776936";
 
 const OPUS_BASE_URL = "https://operator.opus.com";
 
 
-export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
+export async function initiateOpusJob(searchParams: any, userPriority: string) {
   if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
     throw new Error(
       "Opus crawler workflow ID or service key is not configured."
@@ -31,7 +30,7 @@ export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
     body: JSON.stringify({
       workflowId: CRAWLER_WORKFLOW_ID,
       title: jobTitle,
-      description: `Searching for properties with URL: ${fundaUrl} and priority: ${userPriority}`,
+      description: `Searching for properties in ${searchParams.selected_area?.join(', ')} with priority: ${userPriority}`,
     }),
   });
 
@@ -55,9 +54,9 @@ export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
     body: JSON.stringify({
       jobExecutionId: jobExecutionId,
       jobPayloadSchemaInstance: {
-        fundaurl: {
-          value: fundaUrl,
-          type: "str",
+        city_list: {
+          value: searchParams.selected_area,
+          type: "obj",
         },
         user_priority: {
             value: userPriority,

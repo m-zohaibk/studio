@@ -205,35 +205,6 @@ const HomeFindingAgent = () => {
     }
   };
 
-  const buildFundaUrl = () => {
-    const baseUrl = `https://www.funda.nl/en/zoeken/koop?`;
-    const queryParts: string[] = [];
-  
-    if (searchParams.selected_area && searchParams.selected_area.length > 0) {
-      queryParts.push(`selected_area=${JSON.stringify(searchParams.selected_area)}`);
-    }
-    if (searchParams.price) {
-      queryParts.push(`price="${searchParams.price}"`);
-    }
-    if (searchParams.availability && searchParams.availability.length > 0) {
-       queryParts.push(`availability=${JSON.stringify(searchParams.availability)}`);
-    }
-    if (searchParams.floor_area) {
-        queryParts.push(`floor_area="${searchParams.floor_area}"`);
-    }
-    if (searchParams.bedrooms) {
-        queryParts.push(`bedrooms="${searchParams.bedrooms}"`);
-    }
-    if (searchParams.energy_label && searchParams.energy_label.length > 0) {
-        queryParts.push(`energy_label=${JSON.stringify(searchParams.energy_label)}`);
-    }
-    if (searchParams.construction_period && searchParams.construction_period.length > 0) {
-        queryParts.push(`construction_period=${JSON.stringify(searchParams.construction_period)}`);
-    }
-    
-    return baseUrl + queryParts.join('&');
-  };
-
   useEffect(() => {
     let progressInterval: NodeJS.Timeout | null = null;
     if (loading) {
@@ -306,10 +277,8 @@ const HomeFindingAgent = () => {
     setPollingStatus('Initializing search...');
     setView('results');
 
-    const fundaUrl = buildFundaUrl();
-
     try {
-      const { jobExecutionId } = await initiateOpusJob(fundaUrl, userPriority);
+      const { jobExecutionId } = await initiateOpusJob(searchParams, userPriority);
       setPollingStatus('Job initiated, waiting for completion...');
       pollJob(jobExecutionId); // Start polling
     } catch (e: any) {

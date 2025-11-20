@@ -103,7 +103,7 @@ export async function checkOpusJobStatus(jobExecutionId: string) {
 }
 
 export async function getOpusJobResults(jobExecutionId: string) {
-  if (!CRAWLER_OPus_SERVICE_KEY) {
+  if (!CRAWLER_OPUS_SERVICE_KEY) {
     throw new Error("Opus crawler service key is not configured.");
   }
 
@@ -335,3 +335,6 @@ export async function checkOpusJobStatusWithKey(
   return { status: statusData.status || statusData.state };
 }
 
+
+
+    

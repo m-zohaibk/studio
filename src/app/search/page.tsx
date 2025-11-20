@@ -453,6 +453,31 @@ const HomeFindingAgent = () => {
       setConfirmationStats({ propertiesScanned: 0, perfectMatches: 0, viewingsBooked: 0 });
   }
 
+  const autofillForm = () => {
+    setSearchParams({
+      selected_area: ['amsterdam'],
+      price: '300000-700000',
+      availability: ['available'],
+      floor_area: '80-',
+      bedrooms: '2-',
+      energy_label: ['A', 'B'],
+      construction_period: ['from_2001_to_2010', 'from_2011_to_2020'],
+    });
+    setPriceRange([300000, 700000]);
+    setUserPriority('A quiet street with a lot of green, preferably a garden.');
+    setBookingInfo({
+        email: 'test.user@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        phone: '0612345678',
+        postCode: '1012AB',
+        houseNumber: '123',
+        addition: 'A',
+        wantToSellHouse: false,
+        hadFinancialConsultation: true,
+    });
+  };
+
   if (view === 'booking-progress') {
     return (
       <BookingProgress 
@@ -587,6 +612,13 @@ const HomeFindingAgent = () => {
   return (
     <div className="min-h-screen bg-background p-6 w-full flex justify-center items-center">
       <div className="max-w-2xl mx-auto w-full">
+        {process.env.NODE_ENV === 'development' && (
+          <div className="absolute top-24 right-6">
+            <Button variant="outline" onClick={autofillForm}>
+              Autofill for Dev
+            </Button>
+          </div>
+        )}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-muted-foreground">

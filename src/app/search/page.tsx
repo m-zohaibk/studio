@@ -569,7 +569,7 @@ const HomeFindingAgent = () => {
                       </Button>
                     </div>
                   </div>
-                  <div className="max-h-[calc(100vh-400px)] overflow-y-auto mb-6 pr-2">
+                  <div className="mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {properties.map((prop) => <PropertyCard key={prop.id} property={prop} onBookViewing={() => openBookingDialog(prop)} />)}
                     </div>
@@ -841,3 +841,5 @@ export default function SearchPage() {
         </main>
     )
 }
+
+    

@@ -87,15 +87,6 @@ export default function PropertyCard({ property, onBookViewing }: PropertyCardPr
          <Button onClick={onBookViewing} className="w-full">
             <CalendarPlus className="w-4 h-4 mr-2" /> Book Viewing
         </Button>
-         <Button asChild variant="outline" className="w-full">
-            <a
-                href={property.url}
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                View on Funda <ExternalLink className="w-4 h-4 ml-2" />
-            </a>
-        </Button>
       </CardFooter>
     </Card>
   );

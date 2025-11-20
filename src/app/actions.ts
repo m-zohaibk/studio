@@ -2,16 +2,16 @@
 "use server";
 
 // --- Opus Workflow Configuration ---
-const CRAWLER_WORKFLOW_ID = "RblK0hTljCNVKHhb";
-const BOOKING_WORKFLOW_ID = "UJ855z3jUzjA6RSn";
-const OPUS_SERVICE_KEY =
-  "_725a31538bb686e434d64fbf5545b0a9cccfd0dc1c7ca631f71c4c85d2e866a1584dc12ac6ff883b6d6933366a646969";
+const CRAWLER_WORKFLOW_ID = process.env.CRAWLER_WORKFLOW_ID;
+const BOOKING_WORKFLOW_ID = process.env.BOOKING_WORKFLOW_ID;
+const CRAWLER_OPUS_SERVICE_KEY = process.env.CRAWLER_OPUS_SERVICE_KEY;
+const BOOKING_OPUS_SERVICE_KEY = process.env.BOOKING_OPUS_SERVICE_KEY;
 
 const OPUS_BASE_URL = "https://operator.opus.com";
 
 
 export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
-  if (!CRAWLER_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
+  if (!CRAWLER_WORKFLOW_ID || !CRAWLER_OPUS_SERVICE_KEY) {
     throw new Error(
       "Opus crawler workflow ID or service key is not configured."
     );
@@ -25,7 +25,7 @@ export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-service-key": OPUS_SERVICE_KEY,
+      "x-service-key": CRAWLER_OPUS_SERVICE_KEY,
     },
     body: JSON.stringify({
       workflowId: CRAWLER_WORKFLOW_ID,
@@ -49,7 +49,7 @@ export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-service-key": OPUS_SERVICE_KEY,
+      "x-service-key": CRAWLER_OPUS_SERVICE_KEY,
     },
     body: JSON.stringify({
       jobExecutionId: jobExecutionId,
@@ -77,7 +77,7 @@ export async function initiateOpusJob(fundaUrl: string, userPriority: string) {
 }
 
 export async function checkOpusJobStatus(jobExecutionId: string) {
-  if (!OPUS_SERVICE_KEY) {
+  if (!CRAWLER_OPUS_SERVICE_KEY) {
     throw new Error("Opus crawler service key is not configured.");
   }
 
@@ -85,7 +85,7 @@ export async function checkOpusJobStatus(jobExecutionId: string) {
   const response = await fetch(
     `${OPUS_BASE_URL}/job/${jobExecutionId}/status`,
     {
-      headers: { "x-service-key": OPUS_SERVICE_KEY },
+      headers: { "x-service-key": CRAWLER_OPUS_SERVICE_KEY },
     }
   );
 
@@ -103,7 +103,7 @@ export async function checkOpusJobStatus(jobExecutionId: string) {
 }
 
 export async function getOpusJobResults(jobExecutionId: string) {
-  if (!OPUS_SERVICE_KEY) {
+  if (!CRAWLER_OPus_SERVICE_KEY) {
     throw new Error("Opus crawler service key is not configured.");
   }
 
@@ -111,7 +111,7 @@ export async function getOpusJobResults(jobExecutionId: string) {
   const resultsResponse = await fetch(
     `${OPUS_BASE_URL}/job/${jobExecutionId}/results`,
     {
-      headers: { "x-service-key": OPUS_SERVICE_KEY },
+      headers: { "x-service-key": CRAWLER_OPUS_SERVICE_KEY },
     }
   );
 
@@ -164,7 +164,7 @@ export async function getOpusJobResults(jobExecutionId: string) {
 }
 
 export async function runBookingWorkflow(bookingData: any) {
-  if (!BOOKING_WORKFLOW_ID || !OPUS_SERVICE_KEY) {
+  if (!BOOKING_WORKFLOW_ID || !BOOKING_OPUS_SERVICE_KEY) {
     throw new Error(
       "Opus booking workflow ID or service key is not configured."
     );
@@ -176,7 +176,7 @@ export async function runBookingWorkflow(bookingData: any) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-service-key": OPUS_SERVICE_KEY,
+        "x-service-key": BOOKING_OPUS_SERVICE_KEY,
       },
       body: JSON.stringify({
         workflowId: BOOKING_WORKFLOW_ID,
@@ -253,7 +253,7 @@ export async function runBookingWorkflow(bookingData: any) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-service-key": OPUS_SERVICE_KEY,
+        "x-service-key": BOOKING_OPUS_SERVICE_KEY,
       },
 
       
@@ -271,7 +271,7 @@ export async function runBookingWorkflow(bookingData: any) {
     }
 
     // We can poll here if we need to confirm the booking was processed
-    await pollJobStatus(jobExecutionId, OPUS_SERVICE_KEY);
+    await pollJobStatus(jobExecutionId, BOOKING_OPUS_SERVICE_KEY);
     
     // Return a simple, clean success object
     return {
@@ -334,3 +334,4 @@ export async function checkOpusJobStatusWithKey(
   );
   return { status: statusData.status || statusData.state };
 }
+

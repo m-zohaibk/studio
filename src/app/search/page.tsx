@@ -13,6 +13,7 @@ import BookingConfirmation from '@/components/search/BookingConfirmation';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import BookingProgress from '@/components/search/BookingProgress';
+import { saveUserData } from '@/_actions/postAction';
 
 type View = 'questionnaire' | 'booking' | 'results' | 'confirmation' | 'booking-progress';
 
@@ -385,6 +386,31 @@ const HomeFindingAgent = () => {
     setProperties([]);
     setPollingStatus('Initializing search...');
     setView('results');
+
+    // Save user data to MongoDB
+    try {
+      const saveResult = await saveUserData({
+        firstName: bookingInfo.firstName,
+        lastName: bookingInfo.lastName,
+        email: bookingInfo.email,
+        phone: bookingInfo.phone,
+        postCode: bookingInfo.postCode,
+        houseNumber: bookingInfo.houseNumber,
+        addition: bookingInfo.addition,
+        wantToSellHouse: bookingInfo.wantToSellHouse,
+        hadFinancialConsultation: bookingInfo.hadFinancialConsultation,
+      });
+      
+      if (saveResult.success) {
+        console.log("User data saved successfully with ID:", saveResult.userId);
+      } else {
+        console.error("Failed to save user data:", saveResult.error);
+        // Continue with search even if save fails
+      }
+    } catch (e: any) {
+      console.error("Error saving user data:", e);
+      // Continue with search even if save fails
+    }
 
     const fundaUrl = buildFundaUrl();
 
